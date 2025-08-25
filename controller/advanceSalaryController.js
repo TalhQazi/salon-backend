@@ -3,16 +3,14 @@ const cloudinary = require("../config/cloudinary");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const AdvanceSalary = require("../models/AdvanceSalary");
 const Employee = require("../models/Employee");
 
 // Cloudinary configured globally via config/cloudinary
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Use OS temp directory for serverless compatibility
+const uploadsDir = os.tmpdir();
 
 // Multer configuration
 const storage = multer.diskStorage({

@@ -5,6 +5,7 @@ const cloudinary = require('../config/cloudinary');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 // Cloudinary configured globally via config/cloudinary
 
@@ -17,7 +18,7 @@ if (!fs.existsSync(uploadsDir)) {
 // Multer configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadsDir);
+    cb(null, os.tmpdir());
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);
