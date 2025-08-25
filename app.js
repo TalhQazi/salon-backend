@@ -85,6 +85,15 @@ app.use("/api/clients", clientRoutes);
 app.use("/api/admin-clients", adminClientRoutes);
 app.use("/api/bills", billRoutes);
 
+// Favicon handler (to prevent 404s)
+app.get("/favicon.ico", (req, res) => {
+  res.status(204).end();
+});
+
+app.get("/favicon.png", (req, res) => {
+  res.status(204).end();
+});
+
 // Health check endpoint
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -96,7 +105,8 @@ app.get("/", (req, res) => {
       MONGO_URI: process.env.MONGO_URI ? "✅ SET" : "❌ NOT SET",
       JWT_SECRET: process.env.JWT_SECRET ? "✅ SET" : "❌ NOT SET",
       CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ? "✅ SET" : "❌ NOT SET",
-      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? "✅ SET" : "❌ NOT SET"
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? "✅ SET" : "❌ NOT SET",
+      AWS_REGION: process.env.AWS_REGION ? "✅ SET" : "❌ NOT SET"
     }
   });
 });
@@ -176,19 +186,34 @@ app.use((err, req, res, next) => {
 });
 
 // MongoDB Connection (for serverless, reuse connections)
-if (mongoose.connection.readyState === 0 && process.env.MONGO_URI) {
-  mongoose
-    .connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    .then(() => {
+let isConnected = false;
+
+const connectToMongoDB = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  try {
+    if (process.env.MONGO_URI) {
+      await mongoose.connect(process.env.MONGO_URI, {
+        bufferCommands: false,
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      isConnected = true;
       console.log("✅ MongoDB connected successfully");
-    })
-    .catch((err) => {
-      console.error("❌ MongoDB connection error:", err.message);
-    });
-}
+    } else {
+      console.error("❌ MONGO_URI environment variable not set");
+    }
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error.message);
+    isConnected = false;
+  }
+};
+
+// Connect on startup
+connectToMongoDB();
 
 // Handle MongoDB connection events
 mongoose.connection.on('error', (err) => {
