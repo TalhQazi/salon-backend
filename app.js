@@ -46,6 +46,18 @@ app.use("/api/clients", clientRoutes);
 app.use("/api/admin-clients", adminClientRoutes);
 app.use("/api/bills", billRoutes);
 
+// Test route
+app.get("/", (req, res) => {
+  res.json({ 
+    message: "Salon Backend API is running!",
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      MONGO_URI: process.env.MONGO_URI ? "Set" : "Not Set",
+      JWT_SECRET: process.env.JWT_SECRET ? "Set" : "Not Set"
+    }
+  });
+});
+
 // Mongo connection (reuse across invocations)
 if (mongoose.connection.readyState === 0 && process.env.MONGO_URI) {
   mongoose
