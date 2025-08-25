@@ -1,6 +1,6 @@
 // config/cloudinary.js
 const cloudinary = require("cloudinary").v2;
-require("dotenv").config();
+// Environment variables are provided by the platform
 
 // Configure using environment variables for security
 cloudinary.config({

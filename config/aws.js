@@ -1,5 +1,5 @@
 const AWS = require("aws-sdk");
-require("dotenv").config();
+// Environment variables are provided by the platform
 
 // Configure AWS
 AWS.config.update({

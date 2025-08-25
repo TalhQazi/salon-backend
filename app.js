@@ -1,12 +1,11 @@
 const express = require("express");
-const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
-// Load env variables
-dotenv.config();
+// Note: Vercel automatically provides environment variables
+// No need for dotenv.config() in serverless environment
 
 // Create express app
 const app = express();

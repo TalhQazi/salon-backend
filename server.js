@@ -1,5 +1,4 @@
 const express = require("express");
-const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -7,8 +6,7 @@ const rateLimit = require("express-rate-limit");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 
-// Load env variables
-dotenv.config();
+// Note: Environment variables are handled by the platform
 
 // Create express app
 const app = express();
