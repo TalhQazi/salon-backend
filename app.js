@@ -9,6 +9,8 @@ const rateLimit = require("express-rate-limit");
 
 // Create express app
 const app = express();
+// Trust proxy (needed on Vercel/Heroku/etc. to respect X-Forwarded-For headers)
+app.set("trust proxy", 1);
 
 // Security Middleware
 app.use(
