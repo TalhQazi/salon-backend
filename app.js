@@ -37,7 +37,7 @@ app.use(limiter);
 // CORS Configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || false  // Set specific frontend URL in production
+    ? process.env.FRONTEND_URL || true  // Allow all origins if FRONTEND_URL not set
     : true,  // Allow all origins in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

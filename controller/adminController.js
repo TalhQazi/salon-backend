@@ -1,28 +1,48 @@
-require('dotenv').config();
 const Admin = require('../models/Admin');
 const AdminAttendance = require('../models/AdminAttendance');
-const cloudinary = require('cloudinary').v2;
+const cloudinary = require('../config/cloudinary');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const os = require('os');
 
-// Cloudinary configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Strong Password Validation Function
+function validatePassword(password) {
+  const minLength = 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  
+  const errors = [];
+  
+  if (password.length < minLength) {
+    errors.push(`Password must be at least ${minLength} characters long`);
+  }
+  
+  if (!hasUppercase) {
+    errors.push('Password must contain at least one uppercase letter (A-Z)');
+  }
+  
+  if (!hasNumber && !hasSpecialChar) {
+    errors.push('Password must contain at least one number (0-9) or special character (!@#$%^&* etc.)');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors: errors,
+    requirements: [
+      'Minimum 8 characters',
+      'At least one uppercase letter (A-Z)',
+      'At least one number (0-9) OR special character (!@#$%^&* etc.)'
+    ]
+  };
 }
 
-// Multer configuration
+// Multer configuration for serverless compatibility
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadsDir);
+    cb(null, os.tmpdir());
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);
@@ -167,20 +187,70 @@ async function verifyAdminFace(storedImageUrl, attendanceImagePath) {
 // Add Admin
 exports.addAdmin = async (req, res) => {
   try {
-    const { name, email, phoneNumber } = req.body;
+    const { name, email, password, confirmPassword, phoneNumber } = req.body;
     
-    // Check if admin already exists with same email or phone
-    const existingAdmin = await Admin.findOne({
-      $or: [
-        { email: email },
-        { phoneNumber: phoneNumber }
-      ]
-    });
-
-    if (existingAdmin) {
+    // Validate required fields
+    if (!name) {
       return res.status(400).json({
-        message: 'Admin already exists with this email or phone number'
+        message: 'Name is required'
       });
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required'
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({
+        message: 'Password is required',
+        requirements: [
+          'Minimum 8 characters',
+          'At least one uppercase letter (A-Z)',
+          'At least one number (0-9) OR special character (!@#$%^&* etc.)'
+        ]
+      });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        message: 'Password does not meet requirements',
+        errors: passwordValidation.errors,
+        requirements: passwordValidation.requirements
+      });
+    }
+
+    if (!confirmPassword) {
+      return res.status(400).json({
+        message: 'Please confirm your password'
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        message: 'Password and confirm password do not match'
+      });
+    }
+
+    // Check if email already exists
+    const existingEmailAdmin = await Admin.findOne({ email: email });
+    if (existingEmailAdmin) {
+      return res.status(400).json({
+        message: 'Email already registered. Please use a different email.'
+      });
+    }
+    
+    // Check if admin already exists with same phone number
+    if (phoneNumber) {
+      const existingPhoneAdmin = await Admin.findOne({ phoneNumber: phoneNumber });
+      if (existingPhoneAdmin) {
+        return res.status(400).json({
+          message: 'Admin already exists with this phone number'
+        });
+      }
     }
 
     let livePictureUrl = '';
@@ -211,9 +281,14 @@ exports.addAdmin = async (req, res) => {
       cleanupTempImage(req.file.path);
     }
 
+    // Hash password (required)
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     const admin = new Admin({
       name,
       email,
+      password: hashedPassword,
       phoneNumber,
       livePicture: livePictureUrl
     });
@@ -226,7 +301,8 @@ exports.addAdmin = async (req, res) => {
         adminId: admin.adminId,
         name: admin.name,
         email: admin.email,
-        phoneNumber: admin.phoneNumber
+        phoneNumber: admin.phoneNumber,
+        hasPassword: true // Password is always set now
       }
     });
   } catch (err) {
@@ -496,6 +572,76 @@ exports.markAbsentAdmins = async (req, res) => {
     res.status(500).json({
       message: 'Error marking absent admins',
       error: err.message
+    });
+  }
+};
+
+// Admin Login with Email/Password
+exports.adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required'
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({
+        message: 'Password is required'
+      });
+    }
+
+    // Find admin by email
+    const admin = await Admin.findOne({ email: email });
+    if (!admin) {
+      return res.status(401).json({
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Generate JWT token
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { 
+        adminId: admin._id,
+        adminDbId: admin.adminId,
+        email: admin.email,
+        role: 'admin',
+        name: admin.name
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      message: 'Admin login successful',
+      token,
+      admin: {
+        id: admin._id,
+        adminId: admin.adminId,
+        name: admin.name,
+        email: admin.email,
+        role: 'admin'
+      },
+      redirectTo: '/admin-panel'
+    });
+
+  } catch (error) {
+    console.error('Admin Login Error:', error);
+    res.status(500).json({
+      message: 'Login failed',
+      error: error.message
     });
   }
 };

@@ -23,6 +23,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
   fileFilter: function (req, file, cb) {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -36,6 +39,15 @@ const handleFileUpload = (req, res, next) => {
   upload.single("livePicture")(req, res, (err) => {
     if (err) {
       console.error("Multer Error:", err);
+
+      // Handle specific file size error
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          message: "File size too large",
+          error: "File size should be less than 50MB",
+        });
+      }
+
       return res.status(400).json({
         message: "File upload error",
         error: err.message,
@@ -43,6 +55,44 @@ const handleFileUpload = (req, res, next) => {
     }
     console.log("📋 Parsed body:", req.body);
     console.log("📁 File:", req.file);
+
+    // Check if file was uploaded successfully
+    if (!req.file) {
+      return res.status(400).json({
+        message: "No file uploaded or file upload failed",
+        error: "File not found in request",
+      });
+    }
+
+    // Verify file exists
+    if (!fs.existsSync(req.file.path)) {
+      return res.status(400).json({
+        message: "Uploaded file not found on server",
+        error: `File path: ${req.file.path} does not exist`,
+      });
+    }
+
+    // Check file size (additional validation)
+    const fileSizeInMB = req.file.size / (1024 * 1024);
+    console.log(`📏 File size: ${fileSizeInMB.toFixed(2)} MB`);
+
+    if (fileSizeInMB > 50) {
+      // Clean up the file
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.log(
+          "⚠️ Could not cleanup oversized file:",
+          cleanupError.message
+        );
+      }
+
+      return res.status(400).json({
+        message: "File size too large",
+        error: "File size should be less than 50MB",
+      });
+    }
+
     next();
   });
 };
@@ -58,6 +108,17 @@ const {
 async function verifyEmployeeFace(storedImageUrl, attendanceImagePath) {
   try {
     console.log("🔍 Starting employee face verification for attendance...");
+    console.log("📁 Attendance image path:", attendanceImagePath);
+
+    // Check if file exists
+    if (!fs.existsSync(attendanceImagePath)) {
+      console.log("❌ Attendance image file not found:", attendanceImagePath);
+      return {
+        success: false,
+        message: "Attendance image file not found",
+        error: `File not found: ${attendanceImagePath}`,
+      };
+    }
 
     // Validate attendance image quality
     const imageValidation =
@@ -129,31 +190,31 @@ exports.employeeCheckIn = async (req, res) => {
       });
     }
 
-    // Find employee
-    const employee = await Employee.findById(employeeId);
+    // Find employee by employeeId (string field)
+    const employee = await Employee.findOne({ employeeId: employeeId });
     if (!employee) {
       return res.status(404).json({
         message: "Employee not found",
       });
     }
 
-    // Upload attendance image to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "attendance",
-      resource_type: "auto",
-    });
-
-    // Delete local file
-    fs.unlinkSync(req.file.path);
-
-    // Verify face using AWS Rekognition
+    // Verify face using AWS Rekognition (before uploading to Cloudinary)
+    console.log("🔍 Starting face verification...");
     const faceVerification = await verifyEmployeeFace(
       employee.livePicture,
       req.file.path
     );
+
     if (!faceVerification.success) {
       // Clean up temporary image
-      cleanupTempImage(req.file.path);
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+          console.log("🗑️ Cleaned up temp file after failed verification");
+        }
+      } catch (cleanupError) {
+        console.log("⚠️ Could not cleanup temp file:", cleanupError.message);
+      }
 
       return res.status(400).json({
         message: faceVerification.message,
@@ -166,15 +227,29 @@ exports.employeeCheckIn = async (req, res) => {
       `✅ Face verification successful! Similarity: ${faceVerification.similarity}%`
     );
 
-    // Clean up temporary image after successful verification
-    cleanupTempImage(req.file.path);
+    // Upload attendance image to Cloudinary
+    console.log("☁️ Uploading to Cloudinary:", req.file.path);
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "attendance",
+      resource_type: "auto",
+    });
+
+    console.log("✅ Cloudinary upload successful:", result.secure_url);
+
+    // Delete local file after successful upload
+    try {
+      fs.unlinkSync(req.file.path);
+      console.log("🗑️ Local file deleted:", req.file.path);
+    } catch (deleteError) {
+      console.log("⚠️ Could not delete local file:", deleteError.message);
+    }
 
     // Check if attendance already exists for today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     let attendance = await Attendance.findOne({
-      employeeId: employeeId,
+      employeeId: employee._id,
       date: {
         $gte: today,
         $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
@@ -190,7 +265,7 @@ exports.employeeCheckIn = async (req, res) => {
     // Create or update attendance
     if (!attendance) {
       attendance = new Attendance({
-        employeeId: employeeId,
+        employeeId: employee._id,
         employeeName: employee.name,
         date: today,
         checkInTime: new Date(),
@@ -216,6 +291,17 @@ exports.employeeCheckIn = async (req, res) => {
     });
   } catch (err) {
     console.error("Check-In Error:", err);
+
+    // Clean up file if it exists
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log("🗑️ Cleaned up temp file after error");
+      } catch (cleanupError) {
+        console.log("⚠️ Could not cleanup temp file:", cleanupError.message);
+      }
+    }
+
     res.status(500).json({
       message: "Error during check-in",
       error: err.message,
@@ -240,31 +326,31 @@ exports.employeeCheckOut = async (req, res) => {
       });
     }
 
-    // Find employee
-    const employee = await Employee.findById(employeeId);
+    // Find employee by employeeId (string field)
+    const employee = await Employee.findOne({ employeeId: employeeId });
     if (!employee) {
       return res.status(404).json({
         message: "Employee not found",
       });
     }
 
-    // Upload attendance image to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "attendance",
-      resource_type: "auto",
-    });
-
-    // Delete local file
-    fs.unlinkSync(req.file.path);
-
-    // Verify face using AWS Rekognition
+    // Verify face using AWS Rekognition (before uploading to Cloudinary)
+    console.log("🔍 Starting face verification...");
     const faceVerification = await verifyEmployeeFace(
       employee.livePicture,
       req.file.path
     );
+
     if (!faceVerification.success) {
       // Clean up temporary image
-      cleanupTempImage(req.file.path);
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+          console.log("🗑️ Cleaned up temp file after failed verification");
+        }
+      } catch (cleanupError) {
+        console.log("⚠️ Could not cleanup temp file:", cleanupError.message);
+      }
 
       return res.status(400).json({
         message: faceVerification.message,
@@ -277,15 +363,29 @@ exports.employeeCheckOut = async (req, res) => {
       `✅ Face verification successful! Similarity: ${faceVerification.similarity}%`
     );
 
-    // Clean up temporary image after successful verification
-    cleanupTempImage(req.file.path);
+    // Upload attendance image to Cloudinary
+    console.log("☁️ Uploading to Cloudinary:", req.file.path);
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "attendance",
+      resource_type: "auto",
+    });
+
+    console.log("✅ Cloudinary upload successful:", result.secure_url);
+
+    // Delete local file after successful upload
+    try {
+      fs.unlinkSync(req.file.path);
+      console.log("🗑️ Local file deleted:", req.file.path);
+    } catch (deleteError) {
+      console.log("⚠️ Could not delete local file:", deleteError.message);
+    }
 
     // Find today's attendance
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const attendance = await Attendance.findOne({
-      employeeId: employeeId,
+      employeeId: employee._id,
       date: {
         $gte: today,
         $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
@@ -323,6 +423,17 @@ exports.employeeCheckOut = async (req, res) => {
     });
   } catch (err) {
     console.error("Check-Out Error:", err);
+
+    // Clean up file if it exists
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log("🗑️ Cleaned up temp file after error");
+      } catch (cleanupError) {
+        console.log("⚠️ Could not cleanup temp file:", cleanupError.message);
+      }
+    }
+
     res.status(500).json({
       message: "Error during check-out",
       error: err.message,
@@ -357,7 +468,7 @@ exports.manualAttendanceRequest = async (req, res) => {
     }
 
     // Check if employee exists
-    const employee = await Employee.findById(employeeId);
+    const employee = await Employee.findOne({ employeeId: employeeId });
     if (!employee) {
       return res.status(404).json({
         message: "Employee not found",
@@ -366,7 +477,7 @@ exports.manualAttendanceRequest = async (req, res) => {
 
     // Create manual attendance request
     const manualRequest = new ManualAttendanceRequest({
-      employeeId,
+      employeeId: employee._id,
       employeeName,
       requestType,
       requestedTime,
