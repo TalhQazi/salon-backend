@@ -6,21 +6,10 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Note: No need for uploads directory in serverless environment
 
 // Configure multer to handle multiple files with any field name
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, os.tmpdir());
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
+const storage = multer.memoryStorage();
 
 // Accept any field name for files (this handles dynamic field names)
 const upload = multer({

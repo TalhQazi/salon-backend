@@ -7,21 +7,10 @@ const AdvanceSalary = require("../models/AdvanceSalary");
 
 // Cloudinary configured globally via config/cloudinary
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Note: No need for uploads directory in serverless environment
 
 // Multer configuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,

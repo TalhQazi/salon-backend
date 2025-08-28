@@ -7,21 +7,10 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Note: No need for uploads directory in serverless environment
 
 // Multer config
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, os.tmpdir());
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage }).any();
 
 const handleFileUpload = (req, res, next) => {

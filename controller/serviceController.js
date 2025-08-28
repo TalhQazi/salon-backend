@@ -5,21 +5,11 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Note: No need for uploads directory in serverless environment
+// Files will be uploaded directly to Cloudinary
 
-// Configure multer to handle multiple files with any field name
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
+// Configure multer for memory storage (serverless-friendly)
+const storage = multer.memoryStorage();
 
 // Accept any field name for files (this handles dynamic field names)
 const upload = multer({
@@ -77,7 +67,9 @@ exports.addService = async (req, res) => {
     if (mainImageField && mainImageField.length > 0) {
       try {
         const result = await cloudinary.uploader.upload(
-          mainImageField[0].path,
+          `data:${
+            mainImageField[0].mimetype
+          };base64,${mainImageField[0].buffer.toString("base64")}`,
           {
             folder: "salon-services",
             resource_type: "auto",
@@ -107,7 +99,9 @@ exports.addService = async (req, res) => {
             if (filesObj[fieldName] && filesObj[fieldName].length > 0) {
               try {
                 const result = await cloudinary.uploader.upload(
-                  filesObj[fieldName][0].path,
+                  `data:${filesObj[fieldName][0].mimetype};base64,${filesObj[
+                    fieldName
+                  ][0].buffer.toString("base64")}`,
                   {
                     folder: "salon-services/sub-services",
                     resource_type: "auto",
@@ -320,7 +314,9 @@ exports.updateService = async (req, res) => {
 
         // Upload new image
         const result = await cloudinary.uploader.upload(
-          mainImageField[0].path,
+          `data:${
+            mainImageField[0].mimetype
+          };base64,${mainImageField[0].buffer.toString("base64")}`,
           {
             folder: "salon-services",
             resource_type: "auto",
@@ -360,7 +356,9 @@ exports.updateService = async (req, res) => {
 
                 // Upload new sub-service image
                 const result = await cloudinary.uploader.upload(
-                  filesObj[fieldName][0].path,
+                  `data:${filesObj[fieldName][0].mimetype};base64,${filesObj[
+                    fieldName
+                  ][0].buffer.toString("base64")}`,
                   {
                     folder: "salon-services/sub-services",
                     resource_type: "auto",
