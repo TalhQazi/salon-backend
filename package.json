@@ -1,11 +1,11 @@
 {
   "name": "sarte-salon",
   "version": "1.0.0",
-  "main": "app.js",
+  "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "vercel-build": "echo 'Building for Vercel...'"
+    "vercel-build": "echo 'No build needed for this project'"
   },
   "dependencies": {
     "aws-sdk": "^2.1692.0",
