@@ -1,16 +1,13 @@
-require('dotenv').config();
-const Product = require('../models/Products');
-const cloudinary = require('../config/cloudinary');
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
-<<<<<<< HEAD
-const os = require('os');
-=======
->>>>>>> master
+require("dotenv").config();
+const Product = require("../models/Products");
+const cloudinary = require("../config/cloudinary");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
+const uploadsDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -18,14 +15,10 @@ if (!fs.existsSync(uploadsDir)) {
 // Configure multer to handle multiple files with any field name
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-<<<<<<< HEAD
     cb(null, os.tmpdir());
-=======
-    cb(null, uploadsDir);
->>>>>>> master
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
@@ -42,17 +35,17 @@ const upload = multer({
 const handleFileUpload = (req, res, next) => {
   upload(req, res, (err) => {
     if (err) {
-      console.error('Multer Error:', err);
+      console.error("Multer Error:", err);
       return res.status(400).json({
-        message: 'File upload error',
+        message: "File upload error",
         error: err.message,
       });
     }
-    
+
     // Log the parsed body and files for debugging
-    console.log('📋 Parsed body:', req.body);
-    console.log('📁 Files:', req.files);
-    
+    console.log("📋 Parsed body:", req.body);
+    console.log("📁 Files:", req.files);
+
     next();
   });
 };
@@ -61,12 +54,12 @@ exports.addProduct = async (req, res) => {
   try {
     if (!req.body) {
       return res.status(400).json({
-        message: 'Request body is missing',
+        message: "Request body is missing",
       });
     }
     const { name, subProducts } = req.body;
     if (!name) {
-      return res.status(400).json({ message: 'Product name is required' });
+      return res.status(400).json({ message: "Product name is required" });
     }
     // Convert req.files array to object for easier access
     const filesObj = {};
@@ -79,15 +72,15 @@ exports.addProduct = async (req, res) => {
       });
     }
     // Main product image - Check for both 'image' and 'mainImage' field names
-    let imageUrl = '';
-    const mainImageField = filesObj['image'] || filesObj['mainImage'];
+    let imageUrl = "";
+    const mainImageField = filesObj["image"] || filesObj["mainImage"];
     if (mainImageField && mainImageField.length > 0) {
       try {
         const result = await cloudinary.uploader.upload(
           mainImageField[0].path,
           {
-            folder: 'salon-products',
-            resource_type: 'auto',
+            folder: "salon-products",
+            resource_type: "auto",
             use_filename: true,
             unique_filename: true,
           }
@@ -95,7 +88,7 @@ exports.addProduct = async (req, res) => {
         imageUrl = result.secure_url;
       } catch (cloudinaryError) {
         return res.status(400).json({
-          message: 'Main product image upload failed',
+          message: "Main product image upload failed",
           error: cloudinaryError.message,
         });
       }
@@ -108,22 +101,22 @@ exports.addProduct = async (req, res) => {
         parsedSubProducts = await Promise.all(
           subProductsArr.map(async (sub, idx) => {
             // Only allow: name, price, time, description, image
-            let subImageUrl = '';
+            let subImageUrl = "";
             const fieldName = `subProductImage${idx}`;
             if (filesObj[fieldName] && filesObj[fieldName].length > 0) {
               try {
                 const result = await cloudinary.uploader.upload(
                   filesObj[fieldName][0].path,
                   {
-                    folder: 'salon-products/sub-products',
-                    resource_type: 'auto',
+                    folder: "salon-products/sub-products",
+                    resource_type: "auto",
                     use_filename: true,
                     unique_filename: true,
                   }
                 );
                 subImageUrl = result.secure_url;
               } catch (cloudinaryError) {
-                subImageUrl = '';
+                subImageUrl = "";
               }
             }
             return {
@@ -131,13 +124,13 @@ exports.addProduct = async (req, res) => {
               price: sub.price,
               time: sub.time,
               description: sub.description,
-              image: subImageUrl
+              image: subImageUrl,
             };
           })
         );
       } catch (parseError) {
         return res.status(400).json({
-          message: 'Invalid subProducts JSON format',
+          message: "Invalid subProducts JSON format",
           error: parseError.message,
         });
       }
@@ -148,10 +141,10 @@ exports.addProduct = async (req, res) => {
       subProducts: parsedSubProducts,
     });
     await product.save();
-    res.status(201).json({ message: 'Product added', product });
+    res.status(201).json({ message: "Product added", product });
   } catch (err) {
     res.status(500).json({
-      message: 'Server error',
+      message: "Server error",
       error: err.message,
     });
   }
@@ -162,9 +155,9 @@ exports.getAllProducts = async (req, res) => {
     const products = await Product.find().sort({ createdAt: -1 });
     res.status(200).json(products);
   } catch (err) {
-    console.error('Get All Products Error:', err);
+    console.error("Get All Products Error:", err);
     res.status(500).json({
-      message: 'Error fetching products',
+      message: "Error fetching products",
       error: err.message,
       stack: err.stack,
     });
@@ -175,30 +168,30 @@ exports.getAllProducts = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     if (!id) {
       return res.status(400).json({
-        message: 'Product ID is required'
+        message: "Product ID is required",
       });
     }
 
     const product = await Product.findById(id);
-    
+
     if (!product) {
       return res.status(404).json({
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      product
+      product,
     });
   } catch (err) {
-    console.error('Get Product By ID Error:', err);
+    console.error("Get Product By ID Error:", err);
     res.status(500).json({
-      message: 'Error fetching product',
-      error: err.message
+      message: "Error fetching product",
+      error: err.message,
     });
   }
 };
@@ -207,19 +200,19 @@ exports.getProductById = async (req, res) => {
 const deleteProductImage = async (imageUrl) => {
   try {
     if (!imageUrl) return;
-    
+
     // Extract public ID from Cloudinary URL
-    const urlParts = imageUrl.split('/');
-    const publicId = urlParts[urlParts.length - 1].split('.')[0];
+    const urlParts = imageUrl.split("/");
+    const publicId = urlParts[urlParts.length - 1].split(".")[0];
     const folder = urlParts[urlParts.length - 2];
-    
+
     if (folder && publicId) {
       const fullPublicId = `${folder}/${publicId}`;
       await cloudinary.uploader.destroy(fullPublicId);
       console.log(`✅ Deleted product image from Cloudinary: ${fullPublicId}`);
     }
   } catch (error) {
-    console.error('❌ Error deleting product image from Cloudinary:', error);
+    console.error("❌ Error deleting product image from Cloudinary:", error);
   }
 };
 
@@ -227,19 +220,19 @@ const deleteProductImage = async (imageUrl) => {
 exports.deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     if (!id) {
       return res.status(400).json({
-        message: 'Product ID is required'
+        message: "Product ID is required",
       });
     }
 
     // Find the product first to get image URLs
     const product = await Product.findById(id);
-    
+
     if (!product) {
       return res.status(404).json({
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
@@ -261,22 +254,22 @@ exports.deleteProduct = async (req, res) => {
 
     // Delete the product from database
     await Product.findByIdAndDelete(id);
-    
+
     console.log(`✅ Product deleted successfully: ${id}`);
 
     res.status(200).json({
       success: true,
-      message: 'Product deleted successfully',
+      message: "Product deleted successfully",
       deletedProduct: {
         id: product._id,
-        name: product.name
-      }
+        name: product.name,
+      },
     });
   } catch (err) {
-    console.error('❌ Delete Product Error:', err);
+    console.error("❌ Delete Product Error:", err);
     res.status(500).json({
-      message: 'Error deleting product',
-      error: err.message
+      message: "Error deleting product",
+      error: err.message,
     });
   }
 };
@@ -289,7 +282,7 @@ exports.updateProduct = async (req, res) => {
 
     if (!id) {
       return res.status(400).json({
-        message: 'Product ID is required'
+        message: "Product ID is required",
       });
     }
 
@@ -297,7 +290,7 @@ exports.updateProduct = async (req, res) => {
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return res.status(404).json({
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
@@ -315,7 +308,7 @@ exports.updateProduct = async (req, res) => {
       });
 
       // Handle main image update
-      const mainImageField = filesObj['image'] || filesObj['mainImage'];
+      const mainImageField = filesObj["image"] || filesObj["mainImage"];
       if (mainImageField && mainImageField.length > 0) {
         // Delete old image if exists
         if (existingProduct.image) {
@@ -326,14 +319,14 @@ exports.updateProduct = async (req, res) => {
         const result = await cloudinary.uploader.upload(
           mainImageField[0].path,
           {
-            folder: 'salon-products',
-            resource_type: 'auto',
+            folder: "salon-products",
+            resource_type: "auto",
             use_filename: true,
             unique_filename: true,
           }
         );
         imageUrl = result.secure_url;
-        console.log('✅ New main product image uploaded:', imageUrl);
+        console.log("✅ New main product image uploaded:", imageUrl);
       }
     }
 
@@ -344,7 +337,7 @@ exports.updateProduct = async (req, res) => {
         const subProductsArr = JSON.parse(subProducts);
         parsedSubProducts = await Promise.all(
           subProductsArr.map(async (sub, idx) => {
-            let subImageUrl = sub.image || '';
+            let subImageUrl = sub.image || "";
             const fieldName = `subProductImage${idx}`;
 
             if (req.files && req.files.length > 0) {
@@ -366,14 +359,17 @@ exports.updateProduct = async (req, res) => {
                 const result = await cloudinary.uploader.upload(
                   filesObj[fieldName][0].path,
                   {
-                    folder: 'salon-products/sub-products',
-                    resource_type: 'auto',
+                    folder: "salon-products/sub-products",
+                    resource_type: "auto",
                     use_filename: true,
                     unique_filename: true,
                   }
                 );
                 subImageUrl = result.secure_url;
-                console.log(`✅ New sub-product image ${idx} uploaded:`, subImageUrl);
+                console.log(
+                  `✅ New sub-product image ${idx} uploaded:`,
+                  subImageUrl
+                );
               }
             }
 
@@ -381,9 +377,9 @@ exports.updateProduct = async (req, res) => {
           })
         );
       } catch (parseError) {
-        console.error('❌ JSON parse error for subProducts:', parseError);
+        console.error("❌ JSON parse error for subProducts:", parseError);
         return res.status(400).json({
-          message: 'Invalid subProducts JSON format',
+          message: "Invalid subProducts JSON format",
           error: parseError.message,
         });
       }
@@ -399,7 +395,7 @@ exports.updateProduct = async (req, res) => {
         description: description || existingProduct.description,
         image: imageUrl,
         subProducts: parsedSubProducts,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true, runValidators: true }
     );
@@ -408,17 +404,17 @@ exports.updateProduct = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Product updated successfully',
-      product: updatedProduct
+      message: "Product updated successfully",
+      product: updatedProduct,
     });
   } catch (err) {
-    console.error('❌ Update Product Error:', err);
+    console.error("❌ Update Product Error:", err);
     res.status(500).json({
-      message: 'Error updating product',
-      error: err.message
+      message: "Error updating product",
+      error: err.message,
     });
   }
 };
 
 // Export the middleware
-exports.handleFileUpload = handleFileUpload; 
+exports.handleFileUpload = handleFileUpload;

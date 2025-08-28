@@ -1,30 +1,30 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const adminClientSchema = new mongoose.Schema({
   clientId: {
     type: String,
     required: true,
     unique: true,
-    default: function() {
+    default: function () {
       const year = new Date().getFullYear();
       return `ACLT${year}${Math.floor(Math.random() * 9000) + 1000}`;
-    }
+    },
   },
   name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   phoneNumber: {
     type: String,
     required: true,
     unique: true,
-    trim: true
-  }
+    trim: true,
+  },
 });
 
-adminClientSchema.index({ clientId: 1 });
-adminClientSchema.index({ phoneNumber: 1 });
+// Note: clientId and phoneNumber already have unique: true in schema
+// Only adding index for name field
 adminClientSchema.index({ name: 1 });
 
-module.exports = mongoose.model('AdminClient', adminClientSchema);
+module.exports = mongoose.model("AdminClient", adminClientSchema);

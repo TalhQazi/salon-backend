@@ -1,5 +1,4 @@
 require("dotenv").config();
-<<<<<<< HEAD
 const cloudinary = require("../config/cloudinary");
 const multer = require("multer");
 const fs = require("fs");
@@ -8,20 +7,6 @@ const os = require("os");
 const Expense = require("../models/Expense");
 
 // Cloudinary configured globally via config/cloudinary
-=======
-const cloudinary = require("cloudinary").v2;
-const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
-const Expense = require("../models/Expense");
-
-// Cloudinary configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
->>>>>>> master
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, "../uploads");
@@ -32,11 +17,7 @@ if (!fs.existsSync(uploadsDir)) {
 // Multer configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-<<<<<<< HEAD
     cb(null, os.tmpdir());
-=======
-    cb(null, uploadsDir);
->>>>>>> master
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname);
@@ -78,7 +59,6 @@ exports.addExpense = async (req, res) => {
         .status(400)
         .json({ message: "All fields are required: name, price, description" });
     }
-<<<<<<< HEAD
     if (!req.file) {
       return res.status(400).json({ message: "Image is required" });
     }
@@ -89,54 +69,21 @@ exports.addExpense = async (req, res) => {
     });
     // Delete local file
     fs.unlinkSync(req.file.path);
-=======
-    let imageUrl = null;
-
-    // Handle image upload if file is provided
-    if (req.file) {
-      // Upload image to Cloudinary
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "expenses",
-        resource_type: "auto",
-      });
-      // Delete local file
-      fs.unlinkSync(req.file.path);
-      imageUrl = result.secure_url;
-    }
-
->>>>>>> master
     const expense = new Expense({
       name,
       price: parseFloat(price),
       description,
-<<<<<<< HEAD
       image: result.secure_url,
     });
     await expense.save();
     res.status(201).json({
       message: "Expense submitted successfully",
       expense: {
-=======
-      image: imageUrl || "https://via.placeholder.com/400x300?text=No+Image", // Default placeholder if no image
-      userRole: req.body.userRole || "manager", // Default to manager
-      status: req.body.userRole === "admin" ? "approved" : "pending", // Admin expenses are auto-approved, manager expenses need approval
-    });
-    await expense.save();
-    res.status(201).json({
-      success: true,
-      message: "Expense submitted successfully",
-      data: {
->>>>>>> master
         id: expense._id,
         name: expense.name,
         price: expense.price,
         description: expense.description,
         image: expense.image,
-<<<<<<< HEAD
-=======
-        status: expense.status,
-        userRole: expense.userRole,
->>>>>>> master
       },
     });
   } catch (err) {
@@ -147,7 +94,6 @@ exports.addExpense = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
 // Get All Expenses
 exports.getAllExpenses = async (req, res) => {
   try {
@@ -155,22 +101,6 @@ exports.getAllExpenses = async (req, res) => {
     res.status(200).json(expenses);
   } catch (err) {
     res.status(500).json({
-=======
-// Get All Expenses (only approved expenses)
-exports.getAllExpenses = async (req, res) => {
-  try {
-    const expenses = await Expense.find(
-      { status: "approved" },
-      "name price description image createdAt"
-    );
-    res.status(200).json({
-      success: true,
-      data: expenses,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
->>>>>>> master
       message: "Error fetching expenses",
       error: err.message,
     });
@@ -181,48 +111,15 @@ exports.getAllExpenses = async (req, res) => {
 exports.getPendingExpenses = async (req, res) => {
   try {
     const pendingExpenses = await Expense.find({ status: "pending" });
-<<<<<<< HEAD
     res.status(200).json(pendingExpenses);
   } catch (err) {
     res.status(500).json({
-=======
-    res.status(200).json({
-      success: true,
-      data: pendingExpenses,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
->>>>>>> master
       message: "Error fetching pending expenses",
       error: err.message,
     });
   }
 };
 
-<<<<<<< HEAD
-=======
-// Get Manager's Own Pending Expenses
-exports.getManagerPendingExpenses = async (req, res) => {
-  try {
-    const managerPendingExpenses = await Expense.find({ 
-      status: "pending",
-      userRole: "manager"
-    });
-    res.status(200).json({
-      success: true,
-      data: managerPendingExpenses,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching manager pending expenses",
-      error: err.message,
-    });
-  }
-};
-
->>>>>>> master
 // Approve/Decline Expense (Add this missing function)
 exports.approveDeclineExpense = async (req, res) => {
   try {
