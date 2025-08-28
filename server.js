@@ -1,4 +1,5 @@
-require("dotenv").config();
+// Note: dotenv not needed in serverless environment (Vercel handles env vars)
+// require("dotenv").config();
 
 const express = require("express");
 const mongoose = require("mongoose");
