@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "start:vercel": "node api/index.js"
+    "vercel-build": "echo 'Building for Vercel...'"
   },
   "dependencies": {
     "aws-sdk": "^2.1692.0",

@@ -11,23 +11,25 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 
 // Security Middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
     },
-  },
-}));
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
+  max: process.env.NODE_ENV === "production" ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
   message: {
-    error: "Too many requests from this IP, please try again after 15 minutes."
+    error: "Too many requests from this IP, please try again after 15 minutes.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -35,18 +37,21 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS Configuration
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || true  // Allow all origins if FRONTEND_URL not set
-    : true,  // Allow all origins in development
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === "production"
+        ? process.env.FRONTEND_URL || true // Allow all origins if FRONTEND_URL not set
+        : true, // Allow all origins in development
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Middleware to parse JSON
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Import Routes
 const serviceRoutes = require("./routes/serviceRoutes");
@@ -103,10 +108,14 @@ app.get("/", (req, res) => {
     env_status: {
       MONGO_URI: process.env.MONGO_URI ? "✅ SET" : "❌ NOT SET",
       JWT_SECRET: process.env.JWT_SECRET ? "✅ SET" : "❌ NOT SET",
-      CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ? "✅ SET" : "❌ NOT SET",
-      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? "✅ SET" : "❌ NOT SET",
-      AWS_REGION: process.env.AWS_REGION ? "✅ SET" : "❌ NOT SET"
-    }
+      CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME
+        ? "✅ SET"
+        : "❌ NOT SET",
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID
+        ? "✅ SET"
+        : "❌ NOT SET",
+      AWS_REGION: process.env.AWS_REGION ? "✅ SET" : "❌ NOT SET",
+    },
   });
 });
 
@@ -115,7 +124,7 @@ app.get("/health", (req, res) => {
     status: "OK",
     message: "Salon Backend API is healthy",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development"
+    environment: process.env.NODE_ENV || "development",
   });
 });
 
@@ -132,55 +141,55 @@ app.use("*", (req, res) => {
       "/api/products/*",
       "/api/clients/*",
       "/api/bills/*",
-      "/health"
-    ]
+      "/health",
+    ],
   });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
   console.error("Global Error Handler:", err);
-  
+
   // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(val => val.message);
+  if (err.name === "ValidationError") {
+    const errors = Object.values(err.errors).map((val) => val.message);
     return res.status(400).json({
       success: false,
       message: "Validation Error",
-      errors: errors
+      errors: errors,
     });
   }
-  
+
   // Mongoose duplicate key error
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
     return res.status(400).json({
       success: false,
       message: `${field} already exists`,
-      field: field
+      field: field,
     });
   }
-  
+
   // JWT errors
-  if (err.name === 'JsonWebTokenError') {
+  if (err.name === "JsonWebTokenError") {
     return res.status(401).json({
       success: false,
-      message: "Invalid token"
+      message: "Invalid token",
     });
   }
-  
-  if (err.name === 'TokenExpiredError') {
+
+  if (err.name === "TokenExpiredError") {
     return res.status(401).json({
       success: false,
-      message: "Token expired"
+      message: "Token expired",
     });
   }
-  
+
   // Default server error
   res.status(err.status || 500).json({
     success: false,
     message: err.message || "Internal Server Error",
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
 
@@ -215,12 +224,12 @@ const connectToMongoDB = async () => {
 connectToMongoDB();
 
 // Handle MongoDB connection events
-mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB connection error:', err);
+mongoose.connection.on("error", (err) => {
+  console.error("❌ MongoDB connection error:", err);
 });
 
-mongoose.connection.on('disconnected', () => {
-  console.warn('⚠️ MongoDB disconnected');
+mongoose.connection.on("disconnected", () => {
+  console.warn("⚠️ MongoDB disconnected");
 });
 
 module.exports = app;
