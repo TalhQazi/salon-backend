@@ -1,11 +1,24 @@
 require('dotenv').config();
+<<<<<<< HEAD
 const cloudinary = require('../config/cloudinary');
+=======
+const cloudinary = require('cloudinary').v2;
+>>>>>>> master
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const AdvanceSalary = require('../models/AdvanceSalary');
 
+<<<<<<< HEAD
 // Cloudinary configured globally via config/cloudinary
+=======
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+>>>>>>> master
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '../uploads');

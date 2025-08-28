@@ -1,4 +1,5 @@
 require("dotenv").config();
+<<<<<<< HEAD
 const cloudinary = require("../config/cloudinary");
 const multer = require("multer");
 const fs = require("fs");
@@ -11,6 +12,27 @@ const Employee = require("../models/Employee");
 
 // Use OS temp directory for serverless compatibility
 const uploadsDir = os.tmpdir();
+=======
+const cloudinary = require("cloudinary").v2;
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+const AdvanceSalary = require("../models/AdvanceSalary");
+const Employee = require("../models/Employee");
+
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+>>>>>>> master
 
 // Multer configuration
 const storage = multer.diskStorage({
@@ -24,6 +46,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
+<<<<<<< HEAD
+=======
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+>>>>>>> master
   fileFilter: function (req, file, cb) {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -47,6 +75,18 @@ const handleFileUpload = (req, res, next) => {
   ])(req, res, (err) => {
     if (err) {
       console.error("Multer Error:", err);
+<<<<<<< HEAD
+=======
+
+      // Handle specific file size error
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          message: "File size too large",
+          error: "File size should be less than 50MB",
+        });
+      }
+
+>>>>>>> master
       return res.status(400).json({
         message: "File upload error",
         error: err.message,
@@ -54,6 +94,52 @@ const handleFileUpload = (req, res, next) => {
     }
     console.log("📋 Parsed body:", req.body);
     console.log("📁 Files:", req.files);
+<<<<<<< HEAD
+=======
+
+    // Check if files were uploaded successfully
+    if (!req.files || !req.files.employeeLivePicture || !req.files.image) {
+      return res.status(400).json({
+        message: "Both employee live picture and additional image are required",
+        error: "Missing required files",
+      });
+    }
+
+    // Check file sizes (additional validation)
+    const employeeLivePictureSize =
+      req.files.employeeLivePicture[0].size / (1024 * 1024);
+    const imageSize = req.files.image[0].size / (1024 * 1024);
+    console.log(
+      `📏 Employee live picture size: ${employeeLivePictureSize.toFixed(2)} MB`
+    );
+    console.log(`📏 Additional image size: ${imageSize.toFixed(2)} MB`);
+
+    if (employeeLivePictureSize > 50 || imageSize > 50) {
+      // Clean up the files
+      try {
+        if (
+          req.files.employeeLivePicture[0].path &&
+          fs.existsSync(req.files.employeeLivePicture[0].path)
+        ) {
+          fs.unlinkSync(req.files.employeeLivePicture[0].path);
+        }
+        if (req.files.image[0].path && fs.existsSync(req.files.image[0].path)) {
+          fs.unlinkSync(req.files.image[0].path);
+        }
+      } catch (cleanupError) {
+        console.log(
+          "⚠️ Could not cleanup oversized files:",
+          cleanupError.message
+        );
+      }
+
+      return res.status(400).json({
+        message: "File size too large",
+        error: "File size should be less than 50MB",
+      });
+    }
+
+>>>>>>> master
     next();
   });
 };
@@ -131,8 +217,13 @@ exports.addAdvanceSalaryRequest = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Check if employee exists
     const employee = await Employee.findById(employeeId);
+=======
+    // Check if employee exists by employeeId (string field)
+    const employee = await Employee.findOne({ employeeId: employeeId });
+>>>>>>> master
     if (!employee) {
       return res.status(404).json({
         message: "Employee not found",
@@ -146,7 +237,15 @@ exports.addAdvanceSalaryRequest = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Verify employee face using AWS Rekognition
+=======
+    // Verify employee face using AWS Rekognition (Temporarily bypassed for testing)
+    console.log("🔍 Skipping face verification for testing...");
+
+    // Uncomment below code when face verification is working properly
+    /*
+>>>>>>> master
     const faceVerification = await verifyEmployeeFaceForAdvanceSalary(
       employee.livePicture, // Stored employee image
       req.files.employeeLivePicture[0].path // Current live picture
@@ -167,6 +266,10 @@ exports.addAdvanceSalaryRequest = async (req, res) => {
     console.log(
       `✅ Face verification successful! Similarity: ${faceVerification.similarity}%`
     );
+<<<<<<< HEAD
+=======
+    */
+>>>>>>> master
 
     // Upload additional image to Cloudinary
     const imageResult = await cloudinary.uploader.upload(
@@ -182,11 +285,21 @@ exports.addAdvanceSalaryRequest = async (req, res) => {
     cleanupTempImage(req.files.image[0].path);
 
     const advanceSalary = new AdvanceSalary({
+<<<<<<< HEAD
       employeeId: employee._id,
       employeeName: employee.name,
       employeeLivePicture: employee.livePicture,
       amount: parseFloat(amount),
       image: imageResult.secure_url,
+=======
+      employeeId: employee._id, // Use employee's ObjectId
+      employeeName: req.body.employeeName,
+      employeeLivePicture: employee.livePicture, // Use stored employee picture
+      amount: parseFloat(amount),
+      image: imageResult.secure_url,
+      submittedBy: req.user.managerId || req.user.adminId, // From JWT token
+      submittedByName: req.user.name || req.user.email,
+>>>>>>> master
     });
 
     await advanceSalary.save();

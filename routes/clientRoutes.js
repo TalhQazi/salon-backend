@@ -16,9 +16,15 @@ const {
   searchClients,
 } = require("../controller/clientController");
 
+<<<<<<< HEAD
 // All routes require manager authentication
 router.use(authenticate);
 router.use(authorizeRoles("manager"));
+=======
+// All routes require manager or admin authentication
+router.use(authenticate);
+router.use(authorizeRoles("manager", "admin"));
+>>>>>>> master
 
 // Client CRUD operations
 router.post("/add", addClient);

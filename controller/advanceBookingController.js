@@ -11,6 +11,7 @@ cloudinary.config({
 
 // Handle file upload middleware
 const handleFileUpload = (req, res, next) => {
+<<<<<<< HEAD
   if (!req.files || !req.files.image) {
     return next();
   }
@@ -29,14 +30,28 @@ const handleFileUpload = (req, res, next) => {
       message: "File size should be less than 5MB",
     });
   }
+=======
+  console.log("🔍 File upload middleware called");
+  console.log("🔍 Request body:", req.body);
+  console.log("🔍 Request files:", req.files);
+>>>>>>> master
   next();
 };
 
 // Add Advance Booking
 const addAdvanceBooking = async (req, res) => {
   try {
+<<<<<<< HEAD
     const {
       clientId,
+=======
+    console.log("🔍 Received request body:", req.body);
+    console.log("🔍 Received files:", req.files);
+
+    const {
+      clientId,
+      clientName,
+>>>>>>> master
       date,
       time,
       advancePayment,
@@ -45,21 +60,51 @@ const addAdvanceBooking = async (req, res) => {
       image,
     } = req.body;
 
+<<<<<<< HEAD
     // Validate required fields
     if (
       !clientId ||
+=======
+    // Validate required fields with detailed logging
+    console.log("🔍 Validating fields:");
+    console.log("clientId:", clientId, "Type:", typeof clientId);
+    console.log("clientName:", clientName, "Type:", typeof clientName);
+    console.log("date:", date, "Type:", typeof date);
+    console.log("time:", time, "Type:", typeof time);
+    console.log(
+      "advancePayment:",
+      advancePayment,
+      "Type:",
+      typeof advancePayment
+    );
+    console.log("phoneNumber:", phoneNumber, "Type:", typeof phoneNumber);
+    console.log("description:", description, "Type:", typeof description);
+
+    if (
+      !clientId ||
+      !clientName ||
+>>>>>>> master
       !date ||
       !time ||
       !advancePayment ||
       !phoneNumber ||
       !description
     ) {
+<<<<<<< HEAD
+=======
+      console.log("❌ Validation failed - missing fields detected");
+>>>>>>> master
       return res.status(400).json({
         success: false,
         message: "All fields are required",
       });
     }
 
+<<<<<<< HEAD
+=======
+    console.log("✅ All required fields are present");
+
+>>>>>>> master
     // Check for unique clientId
     const existingBooking = await AdvanceBooking.findOne({ clientId });
     if (existingBooking) {
@@ -96,15 +141,24 @@ const addAdvanceBooking = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Upload image to Cloudinary
     let imageUrl = "";
     if (req.files && req.files.image) {
       const file = req.files.image;
       const result = await cloudinary.uploader.upload(file.tempFilePath, {
+=======
+    // Handle image upload
+    let imageUrl = "";
+    if (req.file) {
+      console.log("🔍 File uploaded:", req.file);
+      const result = await cloudinary.uploader.upload(req.file.path, {
+>>>>>>> master
         folder: "sarte-salon/bookings",
         resource_type: "auto",
       });
       imageUrl = result.secure_url;
+<<<<<<< HEAD
     } else if (image) {
       imageUrl = image;
     }
@@ -113,6 +167,14 @@ const addAdvanceBooking = async (req, res) => {
         success: false,
         message: "Image is required",
       });
+=======
+      console.log("🔍 Image uploaded to Cloudinary:", imageUrl);
+    } else if (image) {
+      imageUrl = image;
+    } else {
+      // For now, use a placeholder image if no image is provided
+      imageUrl = "https://via.placeholder.com/300x300?text=No+Image";
+>>>>>>> master
     }
 
     // Calculate reminder date (24 hours before booking)
@@ -122,6 +184,10 @@ const addAdvanceBooking = async (req, res) => {
     // Create booking
     const booking = new AdvanceBooking({
       clientId,
+<<<<<<< HEAD
+=======
+      clientName,
+>>>>>>> master
       date: bookingDate,
       time,
       advancePayment,
@@ -153,8 +219,13 @@ const getAllAdvanceBookings = async (req, res) => {
   try {
     const bookings = await AdvanceBooking.find(
       {},
+<<<<<<< HEAD
       "clientId date time advancePayment description phoneNumber image reminderDate status"
     );
+=======
+      "clientId clientName date time advancePayment description phoneNumber image reminderDate status createdAt"
+    ).sort({ createdAt: -1 });
+>>>>>>> master
     res.status(200).json({
       success: true,
       message: "Bookings retrieved successfully",
@@ -310,9 +381,14 @@ const updateBooking = async (req, res) => {
     }
 
     // Handle image upload
+<<<<<<< HEAD
     if (req.files && req.files.image) {
       const file = req.files.image;
       const result = await cloudinary.uploader.upload(file.tempFilePath, {
+=======
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+>>>>>>> master
         folder: "sarte-salon/bookings",
         resource_type: "auto",
       });
