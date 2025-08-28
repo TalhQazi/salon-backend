@@ -1,8 +1,6 @@
 // config/cloudinary.js
 const cloudinary = require("cloudinary").v2;
-const dotenv = require("dotenv");
-
-dotenv.config();
+// Note: Vercel provides environment variables automatically
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

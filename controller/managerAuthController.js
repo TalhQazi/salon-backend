@@ -1,4 +1,4 @@
-require("dotenv").config();
+// Note: Vercel provides environment variables automatically
 const Manager = require("../models/Manager");
 const jwt = require("jsonwebtoken");
 const cloudinary = require("../config/cloudinary");

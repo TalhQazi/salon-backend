@@ -1,4 +1,4 @@
-require("dotenv").config();
+// Note: Vercel provides environment variables automatically
 const Employee = require("../models/Employee");
 const cloudinary = require("../config/cloudinary");
 const multer = require("multer");

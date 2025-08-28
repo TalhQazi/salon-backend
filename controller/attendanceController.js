@@ -1,4 +1,4 @@
-require("dotenv").config();
+// Note: Vercel provides environment variables automatically
 const cloudinary = require("../config/cloudinary");
 const multer = require("multer");
 const fs = require("fs");
@@ -10,11 +10,8 @@ const ManualAttendanceRequest = require("../models/ManualAttendanceRequest");
 
 // Cloudinary configured globally via config/cloudinary
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Note: No need for uploads directory in serverless environment
+// Files will be uploaded directly to Cloudinary
 
 // Multer configuration
 const storage = multer.memoryStorage();

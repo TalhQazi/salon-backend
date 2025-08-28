@@ -1,4 +1,4 @@
-require("dotenv").config();
+// Note: Vercel provides environment variables automatically
 const AdminClient = require("../models/AdminClient");
 const Admin = require("../models/Admin");
 const Manager = require("../models/Manager");
