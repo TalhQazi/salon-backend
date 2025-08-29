@@ -26,15 +26,25 @@ app.use(
   })
 );
 
-// Rate limiting
+// Rate limiting (serverless-friendly)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "production" ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
+  max: process.env.NODE_ENV === "production" ? 100 : 1000,
   message: {
     error: "Too many requests from this IP, please try again after 15 minutes.",
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Fix for serverless environments
+  trustProxy: true,
+  keyGenerator: (req) => {
+    return (
+      req.ip ||
+      req.connection.remoteAddress ||
+      req.headers["x-forwarded-for"] ||
+      "unknown"
+    );
+  },
 });
 app.use(limiter);
 
@@ -208,8 +218,10 @@ const connectToMongoDB = async () => {
       await mongoose.connect(process.env.MONGO_URI, {
         bufferCommands: false,
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 10000, // 10 seconds
+        socketTimeoutMS: 30000, // 30 seconds
+        connectTimeoutMS: 10000, // 10 seconds
+        maxIdleTimeMS: 30000, // Close after 30s idle
       });
       isConnected = true;
       console.log("✅ MongoDB connected successfully");
