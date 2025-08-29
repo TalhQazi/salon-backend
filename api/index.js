@@ -1,9 +1,7 @@
 const serverless = require("serverless-http");
 const app = require("../app");
 
-// ✅ Sirf development mode me .env load karo
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
+// Note: Vercel provides environment variables automatically
+// No dotenv needed in serverless environment
 
 module.exports = serverless(app);
