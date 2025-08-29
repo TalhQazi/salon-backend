@@ -87,10 +87,11 @@ const billRoutes = require("./routes/billRoutes");
 app.use(async (req, res, next) => {
   try {
     await connectToMongoDB();
+    console.log("✅ MongoDB middleware completed, calling next()");
     next();
   } catch (error) {
-    console.error("MongoDB connection failed:", error);
-    res.status(500).json({ error: "Database connection failed" });
+    console.error("❌ MongoDB connection failed:", error);
+    return res.status(500).json({ error: "Database connection failed" });
   }
 });
 
@@ -123,6 +124,7 @@ app.get("/favicon.png", (req, res) => {
 
 // Health check endpoint
 app.get("/", (req, res) => {
+  console.log("✅ Root endpoint called, sending response");
   res.status(200).json({
     status: "OK",
     message: "Salon Backend API is running!",
@@ -140,6 +142,7 @@ app.get("/", (req, res) => {
       AWS_REGION: process.env.AWS_REGION ? "✅ SET" : "❌ NOT SET",
     },
   });
+  console.log("✅ Response sent successfully");
 });
 
 app.get("/health", (req, res) => {
