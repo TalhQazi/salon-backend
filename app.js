@@ -83,6 +83,17 @@ const clientRoutes = require("./routes/clientRoutes");
 const adminClientRoutes = require("./routes/adminClientRoutes");
 const billRoutes = require("./routes/billRoutes");
 
+// MongoDB Connection Middleware (lazy loading)
+app.use(async (req, res, next) => {
+  try {
+    await connectToMongoDB();
+    next();
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+    res.status(500).json({ error: "Database connection failed" });
+  }
+});
+
 // Use Routes
 app.use("/api/services", serviceRoutes);
 app.use("/api/auth", authRoutes);
@@ -234,8 +245,8 @@ const connectToMongoDB = async () => {
   }
 };
 
-// Connect on startup
-connectToMongoDB();
+// Note: MongoDB connection will be established on first request
+// This prevents blocking the serverless function startup
 
 // Handle MongoDB connection events
 mongoose.connection.on("error", (err) => {
