@@ -1,5 +1,5 @@
 const AWS = require("aws-sdk");
-// Environment variables are provided by the platform
+// Note: Vercel provides environment variables automatically
 
 // Configure AWS
 AWS.config.update({

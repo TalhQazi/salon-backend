@@ -1,8 +1,7 @@
 // config/cloudinary.js
 const cloudinary = require("cloudinary").v2;
-// Environment variables are provided by the platform
+// Note: Vercel provides environment variables automatically
 
-// Configure using environment variables for security
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -10,31 +9,14 @@ cloudinary.config({
   secure: true,
 });
 
-// Verify configuration is applied (without logging sensitive data)
-const config = cloudinary.config();
-console.log("🔧 Cloudinary Configuration Status:");
-console.log("   Cloud Name:", config.cloud_name ? "✅ SET" : "❌ NOT SET");
-console.log("   API Key:", config.api_key ? "✅ SET" : "❌ NOT SET");
-console.log("   API Secret:", config.api_secret ? "✅ SET" : "❌ NOT SET");
-console.log("   Secure:", config.secure);
-
-// Test the configuration immediately (only if all credentials are present)
-if (config.cloud_name && config.api_key && config.api_secret) {
-  (async () => {
-    try {
-      const pingResult = await cloudinary.api.ping();
-      console.log(
-        "✅ Cloudinary connection test successful:",
-        pingResult.status
-      );
-    } catch (error) {
-      console.error("❌ Cloudinary connection test failed:", error.message);
-    }
-  })();
-} else {
-  console.warn(
-    "⚠️ Cloudinary credentials incomplete. Please check environment variables."
-  );
+// Optional, non-sensitive startup log in non-production
+if (process.env.NODE_ENV !== "production") {
+  const cfg = cloudinary.config();
+  console.log("Cloudinary configured:", {
+    cloud_name: cfg.cloud_name ? cfg.cloud_name : "NOT SET",
+    api_key: cfg.api_key ? "***SET***" : "NOT SET",
+    secure: cfg.secure,
+  });
 }
 
 module.exports = cloudinary;

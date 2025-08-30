@@ -24,26 +24,43 @@ const base64ToBuffer = (base64String) => {
   }
 };
 
-// Enhanced face comparison with detailed logging
-const enhancedFaceComparison = async (storedImagePath, loginImagePath) => {
+// Resolve local file path or remote URL to Buffer
+async function resolveToBuffer(inputPathOrUrl) {
+  try {
+    if (!inputPathOrUrl) return null;
+    const isUrl = /^https?:\/\//i.test(inputPathOrUrl);
+    if (isUrl) {
+      const response = await axios.get(inputPathOrUrl, {
+        responseType: "arraybuffer",
+      });
+      return Buffer.from(response.data);
+    }
+    // Local path
+    return fs.readFileSync(inputPathOrUrl);
+  } catch (err) {
+    console.error("Error resolving image to buffer:", err.message);
+    return null;
+  }
+}
+
+// Enhanced face comparison with detailed logging (supports URL or local path)
+const enhancedFaceComparison = async (storedImageInput, loginImageInput) => {
   try {
     console.log("Starting face comparison process...");
 
-    // Handle both local paths and URLs for stored image
-    let storedImageBuffer;
-    if (storedImagePath.startsWith("http")) {
-      // Download image from URL (Cloudinary)
-      const response = await axios.get(storedImagePath, {
-        responseType: "arraybuffer",
-      });
-      storedImageBuffer = Buffer.from(response.data);
-    } else {
-      // Read local file
-      storedImageBuffer = fs.readFileSync(storedImagePath);
-    }
+    // Resolve both images to buffers
+    const storedImageBuffer = await resolveToBuffer(storedImageInput);
+    const loginImageBuffer = await resolveToBuffer(loginImageInput);
 
-    // Login image is always a local file
-    const loginImageBuffer = fs.readFileSync(loginImagePath);
+    if (!storedImageBuffer || !loginImageBuffer) {
+      return {
+        success: false,
+        similarity: 0,
+        isMatch: false,
+        message: "Could not read image(s) for comparison",
+        error: "IMAGE_READ_FAILED",
+      };
+    }
 
     // Detect faces in stored image
     console.log("Detecting faces in stored image...");

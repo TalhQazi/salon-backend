@@ -8,8 +8,6 @@ const rateLimit = require("express-rate-limit");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 
-// Note: Environment variables are handled by the platform
-
 // Create express app
 const app = express();
 
@@ -30,7 +28,7 @@ app.use(
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "production" ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
+  max: process.env.NODE_ENV === "production" ? 100 : 1000,
   message: {
     error: "Too many requests from this IP, please try again after 15 minutes.",
   },
@@ -44,8 +42,8 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? process.env.FRONTEND_URL || false // Set specific frontend URL in production
-        : true, // Allow all origins in development
+        ? process.env.FRONTEND_URL || false
+        : true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -126,7 +124,6 @@ app.use("*", (req, res) => {
 app.use((err, req, res, next) => {
   console.error("Global Error Handler:", err);
 
-  // Mongoose validation error
   if (err.name === "ValidationError") {
     const errors = Object.values(err.errors).map((val) => val.message);
     return res.status(400).json({
@@ -136,7 +133,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Mongoose duplicate key error
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
     return res.status(400).json({
@@ -146,7 +142,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // JWT errors
   if (err.name === "JsonWebTokenError") {
     return res.status(401).json({
       success: false,
@@ -161,7 +156,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Default server error
   res.status(err.status || 500).json({
     success: false,
     message: err.message || "Internal Server Error",
@@ -169,21 +163,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-// MongoDB Connection with better error handling
+// MongoDB Connection
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => {
-    console.log("✅ MongoDB connected successfully");
-  })
+  .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);
   });
 
-// Handle MongoDB connection events
 mongoose.connection.on("error", (err) => {
   console.error("❌ MongoDB connection error:", err);
 });

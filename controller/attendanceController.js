@@ -1,4 +1,4 @@
-require("dotenv").config();
+// Note: Vercel provides environment variables automatically
 const cloudinary = require("../config/cloudinary");
 const multer = require("multer");
 const fs = require("fs");
@@ -8,18 +8,13 @@ const Employee = require("../models/Employee");
 const Attendance = require("../models/Attendance");
 const ManualAttendanceRequest = require("../models/ManualAttendanceRequest");
 
-// Use os.tmpdir() for temporary files (better for serverless)
-const uploadsDir = os.tmpdir();
+// Cloudinary configured globally via config/cloudinary
+
+// Note: No need for uploads directory in serverless environment
+// Files will be uploaded directly to Cloudinary
 
 // Multer configuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,

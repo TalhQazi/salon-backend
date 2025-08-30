@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+# Sarte-Salon
+Salon in-house portal for employees  
+=======
 # 🎯 Sarte-Salon Backend
 
 A comprehensive salon management system with AI-powered face recognition, built with Node.js and Express.js.
@@ -150,3 +154,4 @@ salon-backend/
 ## 📄 License
 
 This project is licensed under the MIT License.
+>>>>>>> master
