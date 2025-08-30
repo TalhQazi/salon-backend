@@ -12,7 +12,7 @@ const {
   handleFileUpload,
 } = require("../controller/adminAdvanceSalaryController");
 
-// All routes require admin authentication
+// ✅ All routes require admin authentication
 router.use(authenticate);
 router.use(authorizeRoles("admin"));
 

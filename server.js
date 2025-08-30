@@ -5,8 +5,6 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
 
 // Create express app
 const app = express();
@@ -54,7 +52,7 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Import Routes
+// ===== Import Routes =====
 const serviceRoutes = require("./routes/serviceRoutes");
 const authRoutes = require("./routes/authRoute");
 const productRoutes = require("./routes/productRoutes");
@@ -73,7 +71,7 @@ const adminClientRoutes = require("./routes/adminClientRoutes");
 const billRoutes = require("./routes/billRoutes");
 const compareFacesRoute = require("./api/compareFaces");
 
-// Use Routes
+// ===== Use Routes =====
 app.use("/api/services", serviceRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
@@ -82,17 +80,19 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/admin", adminRoutes);
 app.use("/api/expenses", expenseRoutes);
-app.use("/api/advance-salary", advanceSalaryRoutes);
-app.use("/api/admin-advance-salary", adminAdvanceSalaryRoutes);
+app.use("/api/advance-salary", advanceSalaryRoutes); // Employee advance salary
+app.use("/api/admin-advance-salary", adminAdvanceSalaryRoutes); // Admin advance salary
 app.use("/api/admin-approvals", unifiedApprovalRoutes);
 app.use("/api/advance-bookings", advanceBookingRoutes);
 app.use("/api/manager", managerAuthRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/admin-clients", adminClientRoutes);
 app.use("/api/bills", billRoutes);
-app.use("/api/employees", compareFacesRoute);
 
-// Health check endpoint
+// Compare Faces Route
+app.use("/api/employees/compare", compareFacesRoute);
+
+// ===== Health Check =====
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "OK",
@@ -102,7 +102,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// 404 handler
+// ===== 404 Handler =====
 app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
@@ -120,7 +120,7 @@ app.use("*", (req, res) => {
   });
 });
 
-// Global error handler
+// ===== Global Error Handler =====
 app.use((err, req, res, next) => {
   console.error("Global Error Handler:", err);
 
@@ -163,7 +163,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// MongoDB Connection
+// ===== MongoDB Connection =====
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -183,7 +183,7 @@ mongoose.connection.on("disconnected", () => {
   console.warn("⚠️ MongoDB disconnected");
 });
 
-// Graceful shutdown
+// ===== Graceful Shutdown =====
 process.on("SIGTERM", () => {
   console.log("📴 SIGTERM received. Shutting down gracefully...");
   mongoose.connection.close(() => {
@@ -192,7 +192,7 @@ process.on("SIGTERM", () => {
   });
 });
 
-// Start Server
+// ===== Start Server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Salon Backend Server running on port ${PORT}`);

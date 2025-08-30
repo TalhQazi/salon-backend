@@ -4,7 +4,6 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const AdvanceSalary = require("../models/AdvanceSalary");
-const Employee = require("../models/Employee");
 
 // Cloudinary configuration
 cloudinary.config({
@@ -31,9 +30,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-  },
   fileFilter: function (req, file, cb) {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -43,219 +39,54 @@ const upload = multer({
   },
 });
 
-// AWS Face Recognition Integration for Advance Salary
-const {
-  enhancedFaceComparison,
-  validateImageForFaceRecognition,
-  cleanupTempImage,
-} = require("../utils/imageUtils");
-
 const handleFileUpload = (req, res, next) => {
-  upload.fields([
-    { name: "employeeLivePicture", maxCount: 1 },
-    { name: "image", maxCount: 1 },
-  ])(req, res, (err) => {
+  upload.single("image")(req, res, (err) => {
     if (err) {
       console.error("Multer Error:", err);
-
-      // Handle specific file size error
-      if (err.code === "LIMIT_FILE_SIZE") {
-        return res.status(400).json({
-          message: "File size too large",
-          error: "File size should be less than 50MB",
-        });
-      }
-
       return res.status(400).json({
         message: "File upload error",
         error: err.message,
       });
     }
-    console.log("📋 Parsed body:", req.body);
-    console.log("📁 Files:", req.files);
-
-    // Check if files were uploaded successfully
-    if (!req.files || !req.files.employeeLivePicture || !req.files.image) {
-      return res.status(400).json({
-        message: "Both employee live picture and additional image are required",
-        error: "Missing required files",
-      });
-    }
-
-    // Check file sizes (additional validation)
-    const employeeLivePictureSize =
-      req.files.employeeLivePicture[0].size / (1024 * 1024);
-    const imageSize = req.files.image[0].size / (1024 * 1024);
-    console.log(
-      `📏 Employee live picture size: ${employeeLivePictureSize.toFixed(2)} MB`
-    );
-    console.log(`📏 Additional image size: ${imageSize.toFixed(2)} MB`);
-
-    if (employeeLivePictureSize > 50 || imageSize > 50) {
-      // Clean up the files
-      try {
-        if (
-          req.files.employeeLivePicture[0].path &&
-          fs.existsSync(req.files.employeeLivePicture[0].path)
-        ) {
-          fs.unlinkSync(req.files.employeeLivePicture[0].path);
-        }
-        if (req.files.image[0].path && fs.existsSync(req.files.image[0].path)) {
-          fs.unlinkSync(req.files.image[0].path);
-        }
-      } catch (cleanupError) {
-        console.log(
-          "⚠️ Could not cleanup oversized files:",
-          cleanupError.message
-        );
-      }
-
-      return res.status(400).json({
-        message: "File size too large",
-        error: "File size should be less than 50MB",
-      });
-    }
-
     next();
   });
 };
 
-// Face verification function for advance salary requests
-async function verifyEmployeeFaceForAdvanceSalary(
-  storedImageUrl,
-  livePicturePath
-) {
+// ===== Employee adds advance salary request =====
+exports.addAdvanceSalary = async (req, res) => {
   try {
-    console.log("🔍 Starting employee face verification for advance salary...");
+    const { amount } = req.body;
 
-    // Validate live picture quality
-    const imageValidation = validateImageForFaceRecognition(livePicturePath);
-    if (!imageValidation.valid) {
-      console.log("❌ Image validation failed:", imageValidation.message);
-      return {
-        success: false,
-        message: imageValidation.message,
-        error: imageValidation.error,
-      };
+    if (!amount) {
+      return res.status(400).json({ message: "Amount is required" });
     }
 
-    // Perform enhanced face comparison
-    const faceComparison = await enhancedFaceComparison(
-      storedImageUrl, // Stored employee image
-      livePicturePath // Current live picture
-    );
-
-    if (faceComparison.success && faceComparison.isMatch) {
-      console.log(
-        `✅ Employee face verification successful! Similarity: ${faceComparison.similarity}%, Confidence: ${faceComparison.confidence}`
-      );
-      return {
-        success: true,
-        similarity: faceComparison.similarity,
-        message: faceComparison.message,
-      };
-    } else {
-      console.log(
-        `❌ Employee face verification failed. Similarity: ${faceComparison.similarity}%`
-      );
-      return {
-        success: false,
-        similarity: faceComparison.similarity,
-        message: faceComparison.message,
-        error: faceComparison.error,
-      };
-    }
-  } catch (error) {
-    console.error("❌ Employee face verification error:", error);
-    return {
-      success: false,
-      similarity: 0,
-      message: "Face verification process failed",
-      error: error.message,
-    };
-  }
-}
-
-// Add Advance Salary Request (Manager)
-exports.addAdvanceSalaryRequest = async (req, res) => {
-  try {
-    if (!req.body) {
-      return res.status(400).json({
-        message: "Request body is missing",
-      });
+    if (!req.file) {
+      return res.status(400).json({ message: "Image is required" });
     }
 
-    const { employeeId, amount } = req.body;
+    // Upload image to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "employee-advance-salary",
+      resource_type: "auto",
+    });
 
-    if (!employeeId || !amount) {
-      return res.status(400).json({
-        message: "Fields required: employeeId, amount",
-      });
-    }
+    // Delete local file
+    fs.unlinkSync(req.file.path);
 
-    // Check if employee exists by employeeId (string field)
-    const employee = await Employee.findOne({ employeeId: employeeId });
-    if (!employee) {
-      return res.status(404).json({
-        message: "Employee not found",
-      });
-    }
-
-    // Check if required files are uploaded
-    if (!req.files || !req.files.employeeLivePicture || !req.files.image) {
-      return res.status(400).json({
-        message: "Both employee live picture and additional image are required",
-      });
-    }
-
-    // Verify employee face using AWS Rekognition (Temporarily bypassed for testing)
-    console.log("🔍 Skipping face verification for testing...");
-
-    // Uncomment below code when face verification is working properly
-    /*
-    const faceVerification = await verifyEmployeeFaceForAdvanceSalary(
-      employee.livePicture, // Stored employee image
-      req.files.employeeLivePicture[0].path // Current live picture
-    );
-
-    if (!faceVerification.success) {
-      // Clean up temporary files
-      cleanupTempImage(req.files.employeeLivePicture[0].path);
-      cleanupTempImage(req.files.image[0].path);
-
-      return res.status(400).json({
-        message: faceVerification.message,
-        similarity: faceVerification.similarity,
-        error: faceVerification.error,
-      });
-    }
-
-    console.log(
-      `✅ Face verification successful! Similarity: ${faceVerification.similarity}%`
-    );
-    */
-
-    // Upload additional image to Cloudinary
-    const imageResult = await cloudinary.uploader.upload(
-      req.files.image[0].path,
-      {
-        folder: "advance-salary-proof",
-        resource_type: "auto",
-      }
-    );
-
-    // Clean up temporary files after successful upload
-    cleanupTempImage(req.files.employeeLivePicture[0].path);
-    cleanupTempImage(req.files.image[0].path);
-
+    // Create advance salary record with pending status
     const advanceSalary = new AdvanceSalary({
-      employeeId: employee._id, // Use employee's ObjectId
-      employeeName: req.body.employeeName,
-      employeeLivePicture: employee.livePicture, // Use stored employee picture
+      employeeId: req.user._id,
+      employeeName: req.user.name,
+      employeeLivePicture:
+        req.user.profilePicture ||
+        "https://via.placeholder.com/300x300?text=Employee",
       amount: parseFloat(amount),
-      image: imageResult.secure_url,
-      submittedBy: req.user.managerId || req.user.adminId, // From JWT token
-      submittedByName: req.user.name || req.user.email,
+      image: result.secure_url,
+      submittedBy: req.user._id,
+      submittedByName: req.user.name,
+      status: "pending", // Employee request must be approved by admin
+      adminNotes: "",
     });
 
     await advanceSalary.save();
@@ -266,167 +97,59 @@ exports.addAdvanceSalaryRequest = async (req, res) => {
         id: advanceSalary._id,
         amount: advanceSalary.amount,
         image: advanceSalary.image,
+        status: advanceSalary.status,
+        createdAt: advanceSalary.createdAt,
       },
     });
   } catch (err) {
     console.error("Add Advance Salary Error:", err);
     res.status(500).json({
-      message: "Error adding advance salary request",
+      message: "Error submitting advance salary request",
       error: err.message,
     });
   }
 };
 
-// Get All Advance Salary Requests (with filters)
-exports.getAllAdvanceSalaryRequests = async (req, res) => {
+// ===== Get All Advance Salary Records for Employee =====
+exports.getAllAdvanceSalary = async (req, res) => {
   try {
-    const { status } = req.query;
+    const records = await AdvanceSalary.find(
+      { employeeId: req.user._id },
+      "amount image status createdAt"
+    ).sort({ createdAt: -1 });
 
-    const filter = {};
-    if (status) {
-      filter.status = status;
-    }
-
-    const advanceSalaryRequests = await AdvanceSalary.find(filter)
-      .sort({ createdAt: -1 })
-      .select("amount image");
-
-    res.status(200).json(advanceSalaryRequests);
+    res.status(200).json(records);
   } catch (err) {
-    console.error("Get All Advance Salary Requests Error:", err);
+    console.error("Get All Advance Salary Error:", err);
     res.status(500).json({
-      message: "Error fetching advance salary requests",
+      message: "Error fetching advance salary records",
       error: err.message,
     });
   }
 };
 
-// Get Pending Advance Salary Requests (Admin)
-exports.getPendingAdvanceSalaryRequests = async (req, res) => {
-  try {
-    const pendingRequests = await AdvanceSalary.find({ status: "pending" })
-      .sort({ createdAt: -1 })
-      .select("amount image");
-
-    res.status(200).json(pendingRequests);
-  } catch (err) {
-    console.error("Get Pending Advance Salary Requests Error:", err);
-    res.status(500).json({
-      message: "Error fetching pending advance salary requests",
-      error: err.message,
-    });
-  }
-};
-
-// Approve/Decline Advance Salary Request (Admin)
-exports.approveDeclineAdvanceSalary = async (req, res) => {
-  try {
-    const { requestId } = req.params;
-    const { status } = req.body;
-
-    if (!["approved", "declined"].includes(status)) {
-      return res.status(400).json({
-        message: "Status must be either approved or declined",
-      });
-    }
-
-    const advanceSalary = await AdvanceSalary.findById(requestId);
-    if (!advanceSalary) {
-      return res.status(404).json({
-        message: "Advance salary request not found",
-      });
-    }
-
-    if (advanceSalary.status !== "pending") {
-      return res.status(400).json({
-        message: "This request has already been processed",
-      });
-    }
-
-    advanceSalary.status = status;
-    advanceSalary.updatedAt = new Date();
-
-    await advanceSalary.save();
-
-    res.status(200).json({
-      message: `Advance salary request ${status} successfully`,
-      advanceSalary: {
-        id: advanceSalary._id,
-        amount: advanceSalary.amount,
-        image: advanceSalary.image,
-      },
-    });
-  } catch (err) {
-    console.error("Approve/Decline Advance Salary Error:", err);
-    res.status(500).json({
-      message: "Error processing advance salary request",
-      error: err.message,
-    });
-  }
-};
-
-// Get Advance Salary Request by ID
+// ===== Get Advance Salary by ID for Employee =====
 exports.getAdvanceSalaryById = async (req, res) => {
   try {
-    const { requestId } = req.params;
-
-    const advanceSalary = await AdvanceSalary.findById(requestId).select(
-      "amount image"
+    const { recordId } = req.params;
+    const record = await AdvanceSalary.findOne(
+      { _id: recordId, employeeId: req.user._id },
+      "amount image status createdAt"
     );
 
-    if (!advanceSalary) {
-      return res.status(404).json({
-        message: "Advance salary request not found",
-      });
+    if (!record) {
+      return res.status(404).json({ message: "Record not found" });
     }
 
-    res.status(200).json(advanceSalary);
+    res.status(200).json(record);
   } catch (err) {
     console.error("Get Advance Salary by ID Error:", err);
     res.status(500).json({
-      message: "Error fetching advance salary request",
+      message: "Error fetching advance salary record",
       error: err.message,
     });
   }
 };
 
-// Get Advance Salary Statistics
-exports.getAdvanceSalaryStats = async (req, res) => {
-  try {
-    const totalRequests = await AdvanceSalary.countDocuments();
-    const pendingRequests = await AdvanceSalary.countDocuments({
-      status: "pending",
-    });
-    const approvedRequests = await AdvanceSalary.countDocuments({
-      status: "approved",
-    });
-    const declinedRequests = await AdvanceSalary.countDocuments({
-      status: "declined",
-    });
-
-    // Calculate total approved amount
-    const approvedAmounts = await AdvanceSalary.aggregate([
-      { $match: { status: "approved" } },
-      { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
-    ]);
-
-    const totalApprovedAmount =
-      approvedAmounts.length > 0 ? approvedAmounts[0].totalAmount : 0;
-
-    res.status(200).json({
-      totalRequests,
-      pendingRequests,
-      approvedRequests,
-      declinedRequests,
-      totalApprovedAmount,
-    });
-  } catch (err) {
-    console.error("Get Advance Salary Stats Error:", err);
-    res.status(500).json({
-      message: "Error fetching advance salary statistics",
-      error: err.message,
-    });
-  }
-};
-
+// Export middleware
 exports.handleFileUpload = handleFileUpload;

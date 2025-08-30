@@ -48,33 +48,21 @@ const handleFileUpload = (req, res, next) => {
         error: err.message,
       });
     }
-    console.log("📋 Parsed body:", req.body);
-    console.log("📁 File:", req.file);
     next();
   });
 };
 
-// Add Advance Salary (Only amount and image)
+// ===== Add Admin Advance Salary =====
 exports.addAdminAdvanceSalary = async (req, res) => {
   try {
-    const { amount } = req.body || {};
+    const { amount } = req.body;
 
-    // Debug: Log the user object to see what fields are available
-    console.log("🔍 Debug - req.user:", req.user);
-    console.log("🔍 Debug - req.user.adminId:", req.user?.adminId);
-    console.log("🔍 Debug - req.user.name:", req.user?.name);
-    console.log("🔍 Debug - req.user._id:", req.user?._id);
-
-    if (amount === undefined || amount === null || amount === "") {
-      return res.status(400).json({
-        message: "Amount is required",
-      });
+    if (!amount) {
+      return res.status(400).json({ message: "Amount is required" });
     }
 
     if (!req.file) {
-      return res.status(400).json({
-        message: "Image is required",
-      });
+      return res.status(400).json({ message: "Image is required" });
     }
 
     // Upload image to Cloudinary
@@ -86,19 +74,18 @@ exports.addAdminAdvanceSalary = async (req, res) => {
     // Delete local file
     fs.unlinkSync(req.file.path);
 
-    // Create advance salary with all required fields
-    // Use the correct field names from the token
+    // Create advance salary record
     const advanceSalary = new AdvanceSalary({
-      employeeId: req.user.adminId || req.user._id, // Use adminId from token
-      employeeName: req.user.name || "Admin", // Use name from token
+      employeeId: req.user.adminId || req.user._id,
+      employeeName: req.user.name || "Admin",
       employeeLivePicture:
         req.user.profilePicture ||
-        "https://via.placeholder.com/300x300?text=Admin", // Default admin picture
+        "https://via.placeholder.com/300x300?text=Admin",
       amount: parseFloat(amount),
       image: result.secure_url,
-      submittedBy: req.user.adminId || req.user._id, // Admin is submitting
-      submittedByName: req.user.name || "Admin", // Admin name
-      status: "approved", // Admin advance salary is auto-approved
+      submittedBy: req.user.adminId || req.user._id,
+      submittedByName: req.user.name || "Admin",
+      status: "approved", // Direct approval for admin
       adminNotes: "Direct admin advance salary",
     });
 
@@ -122,15 +109,15 @@ exports.addAdminAdvanceSalary = async (req, res) => {
   }
 };
 
-// Get All Admin Advance Salary Records
+// ===== Get All Admin Advance Salary =====
 exports.getAllAdminAdvanceSalary = async (req, res) => {
   try {
-    const advanceSalaryRecords = await AdvanceSalary.find(
-      {},
-      "amount image createdAt"
-    ).sort({ createdAt: -1 });
-
-    res.status(200).json(advanceSalaryRecords);
+    const records = await AdvanceSalary.find({}, "amount image createdAt").sort(
+      {
+        createdAt: -1,
+      }
+    );
+    res.status(200).json(records);
   } catch (err) {
     console.error("Get All Admin Advance Salary Error:", err);
     res.status(500).json({
@@ -140,46 +127,38 @@ exports.getAllAdminAdvanceSalary = async (req, res) => {
   }
 };
 
-// Get Admin Advance Salary Statistics
+// ===== Get Admin Advance Salary Stats =====
 exports.getAdminAdvanceSalaryStats = async (req, res) => {
   try {
     const totalRecords = await AdvanceSalary.countDocuments({});
-
     const amounts = await AdvanceSalary.aggregate([
       { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
     ]);
-
     const totalAmount = amounts.length > 0 ? amounts[0].totalAmount : 0;
 
-    res.status(200).json({
-      totalRecords,
-      totalAmount,
-    });
+    res.status(200).json({ totalRecords, totalAmount });
   } catch (err) {
     console.error("Get Admin Advance Salary Stats Error:", err);
     res.status(500).json({
-      message: "Error fetching admin advance salary statistics",
+      message: "Error fetching admin advance salary stats",
       error: err.message,
     });
   }
 };
 
-// Get Admin Advance Salary by ID
+// ===== Get Admin Advance Salary by ID =====
 exports.getAdminAdvanceSalaryById = async (req, res) => {
   try {
     const { recordId } = req.params;
-
-    const advanceSalary = await AdvanceSalary.findById(recordId).select(
+    const record = await AdvanceSalary.findById(recordId).select(
       "amount image createdAt"
     );
 
-    if (!advanceSalary) {
-      return res.status(404).json({
-        message: "Advance salary record not found",
-      });
+    if (!record) {
+      return res.status(404).json({ message: "Record not found" });
     }
 
-    res.status(200).json(advanceSalary);
+    res.status(200).json(record);
   } catch (err) {
     console.error("Get Admin Advance Salary by ID Error:", err);
     res.status(500).json({
@@ -189,4 +168,5 @@ exports.getAdminAdvanceSalaryById = async (req, res) => {
   }
 };
 
+// Export middleware
 exports.handleFileUpload = handleFileUpload;

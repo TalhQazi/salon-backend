@@ -5,17 +5,23 @@ const advanceSalarySchema = new mongoose.Schema({
   employeeName: { type: String },
   employeeLivePicture: { type: String }, // Cloudinary URL
   amount: { type: Number, required: true },
-  image: { type: String, required: true }, // Cloudinary URL for additional proof
-  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
-  submittedByName: { type: String }, // Manager name
+  image: { type: String, required: true }, // Cloudinary URL for proof
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" }, // Admin or Employee ID
+  submittedByName: { type: String }, // Name of submitter
   status: {
     type: String,
     enum: ["pending", "approved", "declined"],
     default: "pending",
   },
-  adminNotes: String,
+  adminNotes: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+});
+
+// Pre-save middleware to update updatedAt
+advanceSalarySchema.pre("save", function (next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
 module.exports = mongoose.model("AdvanceSalary", advanceSalarySchema);
