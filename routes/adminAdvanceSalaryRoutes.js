@@ -12,17 +12,17 @@ const {
   handleFileUpload,
 } = require("../controller/adminAdvanceSalaryController");
 
-// ✅ All routes require admin authentication
+// All routes require admin authentication
 router.use(authenticate);
 router.use(authorizeRoles("admin"));
 
-// Add Advance Salary (Admin - Direct Approval)
+// Add Admin Advance Salary (Direct Approval)
 router.post("/add", handleFileUpload, addAdminAdvanceSalary);
 
 // Get All Admin Advance Salary Records
 router.get("/all", getAllAdminAdvanceSalary);
 
-// Get Admin Advance Salary Statistics
+// Get Admin Advance Salary Stats
 router.get("/stats", getAdminAdvanceSalaryStats);
 
 // Get Admin Advance Salary by ID

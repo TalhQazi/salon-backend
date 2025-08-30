@@ -20,61 +20,43 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Multer configuration
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 
 const upload = multer({
   storage: storage,
-  fileFilter: function (req, file, cb) {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed!"), false);
-    }
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed!"), false);
   },
 });
 
 const handleFileUpload = (req, res, next) => {
   upload.single("image")(req, res, (err) => {
-    if (err) {
-      console.error("Multer Error:", err);
-      return res.status(400).json({
-        message: "File upload error",
-        error: err.message,
-      });
-    }
+    if (err)
+      return res
+        .status(400)
+        .json({ message: "File upload error", error: err.message });
     next();
   });
 };
 
-// ===== Add Admin Advance Salary =====
+// Add Admin Advance Salary (Auto-approved)
 exports.addAdminAdvanceSalary = async (req, res) => {
   try {
     const { amount } = req.body;
-
-    if (!amount) {
-      return res.status(400).json({ message: "Amount is required" });
-    }
-
-    if (!req.file) {
+    if (!amount) return res.status(400).json({ message: "Amount is required" });
+    if (!req.file)
       return res.status(400).json({ message: "Image is required" });
-    }
 
-    // Upload image to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "admin-advance-salary",
       resource_type: "auto",
     });
 
-    // Delete local file
     fs.unlinkSync(req.file.path);
 
-    // Create advance salary record
     const advanceSalary = new AdvanceSalary({
       employeeId: req.user.adminId || req.user._id,
       employeeName: req.user.name || "Admin",
@@ -85,14 +67,14 @@ exports.addAdminAdvanceSalary = async (req, res) => {
       image: result.secure_url,
       submittedBy: req.user.adminId || req.user._id,
       submittedByName: req.user.name || "Admin",
-      status: "approved", // Direct approval for admin
+      status: "approved",
       adminNotes: "Direct admin advance salary",
     });
 
     await advanceSalary.save();
 
     res.status(201).json({
-      message: "Advance salary added successfully",
+      message: "Admin advance salary added successfully",
       advanceSalary: {
         id: advanceSalary._id,
         amount: advanceSalary.amount,
@@ -101,33 +83,33 @@ exports.addAdminAdvanceSalary = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Add Admin Advance Salary Error:", err);
-    res.status(500).json({
-      message: "Error adding advance salary",
-      error: err.message,
-    });
+    res
+      .status(500)
+      .json({
+        message: "Error adding admin advance salary",
+        error: err.message,
+      });
   }
 };
 
-// ===== Get All Admin Advance Salary =====
+// Get All Admin Advance Salary Records
 exports.getAllAdminAdvanceSalary = async (req, res) => {
   try {
     const records = await AdvanceSalary.find({}, "amount image createdAt").sort(
-      {
-        createdAt: -1,
-      }
+      { createdAt: -1 }
     );
     res.status(200).json(records);
   } catch (err) {
-    console.error("Get All Admin Advance Salary Error:", err);
-    res.status(500).json({
-      message: "Error fetching admin advance salary records",
-      error: err.message,
-    });
+    res
+      .status(500)
+      .json({
+        message: "Error fetching admin advance salary records",
+        error: err.message,
+      });
   }
 };
 
-// ===== Get Admin Advance Salary Stats =====
+// Get Admin Advance Salary Stats
 exports.getAdminAdvanceSalaryStats = async (req, res) => {
   try {
     const totalRecords = await AdvanceSalary.countDocuments({});
@@ -138,35 +120,26 @@ exports.getAdminAdvanceSalaryStats = async (req, res) => {
 
     res.status(200).json({ totalRecords, totalAmount });
   } catch (err) {
-    console.error("Get Admin Advance Salary Stats Error:", err);
-    res.status(500).json({
-      message: "Error fetching admin advance salary stats",
-      error: err.message,
-    });
+    res
+      .status(500)
+      .json({ message: "Error fetching stats", error: err.message });
   }
 };
 
-// ===== Get Admin Advance Salary by ID =====
+// Get Admin Advance Salary by ID
 exports.getAdminAdvanceSalaryById = async (req, res) => {
   try {
     const { recordId } = req.params;
     const record = await AdvanceSalary.findById(recordId).select(
       "amount image createdAt"
     );
-
-    if (!record) {
-      return res.status(404).json({ message: "Record not found" });
-    }
-
+    if (!record) return res.status(404).json({ message: "Record not found" });
     res.status(200).json(record);
   } catch (err) {
-    console.error("Get Admin Advance Salary by ID Error:", err);
-    res.status(500).json({
-      message: "Error fetching advance salary record",
-      error: err.message,
-    });
+    res
+      .status(500)
+      .json({ message: "Error fetching record", error: err.message });
   }
 };
 
-// Export middleware
 exports.handleFileUpload = handleFileUpload;
