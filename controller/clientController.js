@@ -11,25 +11,86 @@ exports.addClient = async (req, res) => {
         message: "Name and phone number are required",
       });
     }
+    // Normalize phone number
+    const normalizedPhone = phoneNumber.replace(/[\s\-\(\)]/g, "");
+
     // Check if phone number already exists
-    const existingClient = await Client.findOne({ phoneNumber });
+    const existingClient = await Client.findOne({
+      phoneNumber: { $regex: `^${normalizedPhone}$`, $options: "i" },
+    });
+
     if (existingClient) {
-      return res.status(400).json({
-        success: false,
-        message: "Client with this phone number already exists",
+      // Add a new visit to existing client
+      const visitId = `VISIT${Date.now()}`;
+      const newVisit = {
+        visitId,
+        date: new Date(),
+        services: [{ name: "Initial Visit", price: 0 }],
+        totalAmount: 0,
+        billNumber: `BILL${Date.now()}`,
+        paymentStatus: "pending",
+      };
+
+      // Add visit to existing client
+      existingClient.visits.push(newVisit);
+      existingClient.totalVisits += 1;
+      existingClient.totalSpent += newVisit.totalAmount;
+      existingClient.lastVisit = new Date();
+
+      await existingClient.save();
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Client with this phone number already exists. Visit added to existing client.",
+        existingClient: {
+          _id: existingClient._id,
+          clientId: existingClient.clientId,
+          name: existingClient.name,
+          phoneNumber: existingClient.phoneNumber,
+          totalVisits: existingClient.totalVisits,
+          totalSpent: existingClient.totalSpent,
+          lastVisit: existingClient.lastVisit,
+        },
+        newVisit: newVisit,
       });
     }
-    // Create new client
-    const client = new Client({ name, phoneNumber });
+
+    // Create new client with initial visit
+    const visitId = `VISIT${Date.now()}`;
+    const initialVisit = {
+      visitId,
+      date: new Date(),
+      services: [{ name: "Initial Visit", price: 0 }],
+      totalAmount: 0,
+      billNumber: `BILL${Date.now()}`,
+      paymentStatus: "pending",
+    };
+
+    const client = new Client({
+      name,
+      phoneNumber: normalizedPhone,
+      totalVisits: 1,
+      totalSpent: 0,
+      lastVisit: new Date(),
+      visits: [initialVisit],
+    });
+
     await client.save();
+
     res.status(201).json({
       success: true,
-      message: "Client added successfully",
+      message: "Client added successfully with initial visit!",
       client: {
+        _id: client._id,
         clientId: client.clientId,
         name: client.name,
         phoneNumber: client.phoneNumber,
+        totalVisits: client.totalVisits,
+        totalSpent: client.totalSpent,
+        lastVisit: client.lastVisit,
       },
+      initialVisit: initialVisit,
     });
   } catch (err) {
     res.status(500).json({
@@ -44,7 +105,7 @@ exports.addClient = async (req, res) => {
 exports.getAllClients = async (req, res) => {
   try {
     const clients = await Client.find().select(
-      "clientId name phoneNumber createdAt"
+      "clientId name phoneNumber totalVisits totalSpent lastVisit createdAt"
     );
     res.status(200).json({
       success: true,
@@ -196,7 +257,9 @@ exports.searchClients = async (req, res) => {
         { phoneNumber: { $regex: query, $options: "i" } },
         { clientId: { $regex: query, $options: "i" } },
       ],
-    }).select("clientId name phoneNumber createdAt");
+    }).select(
+      "clientId name phoneNumber totalVisits totalSpent lastVisit createdAt"
+    );
 
     res.status(200).json({
       success: true,
@@ -207,6 +270,165 @@ exports.searchClients = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error searching clients",
+      error: err.message,
+    });
+  }
+};
+
+// Check if phone number exists (NEW FUNCTION)
+exports.checkPhoneNumber = async (req, res) => {
+  try {
+    const { phoneNumber } = req.query;
+
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required",
+      });
+    }
+
+    // Normalize phone number (remove spaces, dashes, etc.)
+    const normalizedPhone = phoneNumber.replace(/[\s\-\(\)]/g, "");
+
+    const existingClient = await Client.findOne({
+      phoneNumber: { $regex: `^${normalizedPhone}$`, $options: "i" },
+    });
+
+    if (existingClient) {
+      return res.status(200).json({
+        success: true,
+        exists: true,
+        client: {
+          _id: existingClient._id,
+          clientId: existingClient.clientId,
+          name: existingClient.name,
+          phoneNumber: existingClient.phoneNumber,
+          totalVisits: existingClient.totalVisits,
+          totalSpent: existingClient.totalSpent,
+          lastVisit: existingClient.lastVisit,
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      exists: false,
+      client: null,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error checking phone number",
+      error: err.message,
+    });
+  }
+};
+
+// Get client history with visits (NEW FUNCTION)
+exports.getClientHistory = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: "Client ID is required",
+      });
+    }
+
+    const client = await Client.findById(clientId);
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Client not found",
+      });
+    }
+
+    // Sort visits by date (newest first)
+    const sortedVisits = client.visits.sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
+
+    res.status(200).json({
+      success: true,
+      client: {
+        _id: client._id,
+        clientId: client.clientId,
+        name: client.name,
+        phoneNumber: client.phoneNumber,
+        totalVisits: client.totalVisits,
+        totalSpent: client.totalSpent,
+        lastVisit: client.lastVisit,
+        visits: sortedVisits,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching client history",
+      error: err.message,
+    });
+  }
+};
+
+// Add visit to client (NEW FUNCTION)
+exports.addVisitToClient = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { visitData } = req.body;
+
+    if (!clientId || !visitData) {
+      return res.status(400).json({
+        success: false,
+        message: "Client ID and visit data are required",
+      });
+    }
+
+    const client = await Client.findById(clientId);
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Client not found",
+      });
+    }
+
+    // Generate visit ID
+    const visitId = `VISIT${Date.now()}`;
+
+    // Create new visit
+    const newVisit = {
+      visitId,
+      date: new Date(),
+      services: visitData.services || [],
+      totalAmount: visitData.totalAmount || 0,
+      billNumber: visitData.billNumber || `BILL${Date.now()}`,
+      paymentStatus: visitData.paymentStatus || "pending",
+    };
+
+    // Add visit to client
+    client.visits.push(newVisit);
+    client.totalVisits += 1;
+    client.totalSpent += newVisit.totalAmount;
+    client.lastVisit = new Date();
+
+    await client.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Visit added successfully",
+      visit: newVisit,
+      updatedClient: {
+        totalVisits: client.totalVisits,
+        totalSpent: client.totalSpent,
+        lastVisit: client.lastVisit,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error adding visit",
       error: err.message,
     });
   }

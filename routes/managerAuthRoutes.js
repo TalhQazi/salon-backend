@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { 
   addManager,
-  managerLogin,
+  login,
   getManagerProfile,
   updateManagerProfile,
   changeManagerPassword,
@@ -26,7 +26,7 @@ const {
 } = require('../middleware/authMiddleware');
 
 // Public routes (no authentication required)
-router.post('/login', handleFileUpload, managerLogin);
+router.post('/login', handleFileUpload, login);
 router.post('/logout', managerLogout);
 
 // Manager routes (requires manager authentication)

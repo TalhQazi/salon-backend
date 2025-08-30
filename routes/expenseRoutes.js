@@ -4,28 +4,33 @@ const {
   addExpense,
   getAllExpenses,
   getPendingExpenses,
+  getManagerPendingExpenses,
   approveDeclineExpense,
   getExpenseById,
   getExpenseStats,
   handleFileUpload,
 } = require("../controller/expenseController");
+const { authenticate } = require("../middleware/authMiddleware");
 
-// Add Expense (Manager/Admin)
-router.post("/add", handleFileUpload, addExpense);
+// Add Expense (Manager/Admin) - Protected route
+router.post("/add", authenticate, handleFileUpload, addExpense);
 
-// Get All Expenses (with filters)
-router.get("/all", getAllExpenses);
+// Get All Expenses (with filters) - Protected route
+router.get("/all", authenticate, getAllExpenses);
 
-// Get Pending Expenses (Admin)
-router.get("/pending", getPendingExpenses);
+// Get Pending Expenses (Admin) - Protected route
+router.get("/pending", authenticate, getPendingExpenses);
 
-// Approve/Decline Expense (Admin)
-router.put("/:expenseId", approveDeclineExpense);
+// Get Manager's Pending Expenses - Protected route
+router.get("/manager/pending", authenticate, getManagerPendingExpenses);
 
-// Get Expense by ID
-router.get("/:expenseId", getExpenseById);
+// Approve/Decline Expense (Admin) - Protected route
+router.put("/:expenseId", authenticate, approveDeclineExpense);
 
-// Get Expense Statistics (Admin)
-router.get("/stats", getExpenseStats);
+// Get Expense by ID - Protected route
+router.get("/:expenseId", authenticate, getExpenseById);
+
+// Get Expense Statistics (Admin) - Protected route
+router.get("/stats", authenticate, getExpenseStats);
 
 module.exports = router;
