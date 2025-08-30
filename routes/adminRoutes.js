@@ -10,7 +10,6 @@ const {
   handleFileUpload,
 } = require("../controller/adminController");
 
-<<<<<<< HEAD
 // Import unified user controller for role-based user creation
 const {
   addUser,
@@ -35,10 +34,6 @@ router.post(
   },
   addAdmin
 );
-=======
-// Add Admin (live picture optional)
-router.post("/add", handleFileUpload, addAdmin);
->>>>>>> ee42a375675c463dac2b0b73b81fa7f44145c240
 
 // Get All Admins
 router.get("/all", getAllAdmins);
@@ -55,12 +50,10 @@ router.get("/attendance/:adminId", getAdminAttendanceById);
 // Mark Absent Admins (Daily Task)
 router.post("/mark-absent", markAbsentAdmins);
 
-<<<<<<< HEAD
 // Admin Login with Email/Password
 router.post("/login", require("../controller/adminController").adminLogin);
 
 // Step 1: Submit User Form Data (Admin/Manager/Employee)
-router.post("/submit-user-form", submitUserForm);
 
 // Step 2: Capture Face and Complete Registration
 router.post("/capture-user-face", handleUnifiedFileUpload, captureUserFace);
@@ -82,6 +75,4 @@ router.post(
   addUser
 );
 
-=======
->>>>>>> ee42a375675c463dac2b0b73b81fa7f44145c240
 module.exports = router;

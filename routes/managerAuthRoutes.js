@@ -26,13 +26,8 @@ const {
 } = require("../middleware/authMiddleware");
 
 // Public routes (no authentication required)
-<<<<<<< HEAD
 router.post('/login', handleFileUpload, login);
 router.post('/logout', managerLogout);
-=======
-router.post("/login", handleFileUpload, managerLogin);
-router.post("/logout", managerLogout);
->>>>>>> ee42a375675c463dac2b0b73b81fa7f44145c240
 
 // Manager routes (requires manager authentication)
 router.get(
