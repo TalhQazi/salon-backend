@@ -198,3 +198,73 @@ exports.login = async (req, res) => {
     });
   }
 };
+
+// Face Login for Admin (Generate JWT token after face verification)
+exports.adminFaceLogin = async (req, res) => {
+  try {
+    const { adminId, name, faceVerified } = req.body;
+
+    if (!adminId || !name || !faceVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields for face login",
+      });
+    }
+
+    // Find admin by ID (check both User and Admin collections)
+    let admin = await User.findById(adminId);
+    if (!admin) {
+      // Try Admin collection
+      const Admin = require("../models/Admin");
+      admin = await Admin.findById(adminId);
+    }
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    // Check if admin is active
+    if (admin.isActive === false) {
+      return res.status(401).json({
+        success: false,
+        message: "Account is deactivated. Please contact administrator.",
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        adminId: admin._id,
+        email: admin.email || admin.username,
+        role: admin.role || "admin",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Face login successful",
+      data: {
+        token,
+        admin: {
+          adminId: admin.adminId || admin._id,
+          name: admin.name || admin.username,
+          email: admin.email || admin.username,
+          role: admin.role || "admin",
+          lastLogin: new Date(),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Admin Face Login Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};

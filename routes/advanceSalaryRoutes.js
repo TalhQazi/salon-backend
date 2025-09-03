@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const {
   addAdvanceSalaryRequest,
@@ -7,25 +7,29 @@ const {
   approveDeclineAdvanceSalary,
   getAdvanceSalaryById,
   getAdvanceSalaryStats,
-  handleFileUpload
-} = require('../controller/advanceSalaryController');
+  handleFileUpload,
+} = require("../controller/advanceSalaryController");
+const { authenticate } = require("../middleware/authMiddleware");
+
+// All routes require authentication
+router.use(authenticate);
 
 // Add Advance Salary Request (Manager)
-router.post('/add', handleFileUpload, addAdvanceSalaryRequest);
+router.post("/add", handleFileUpload, addAdvanceSalaryRequest);
 
 // Get All Advance Salary Requests (with filters)
-router.get('/all', getAllAdvanceSalaryRequests);
+router.get("/all", getAllAdvanceSalaryRequests);
 
 // Get Pending Advance Salary Requests (Admin)
-router.get('/pending', getPendingAdvanceSalaryRequests);
+router.get("/pending", getPendingAdvanceSalaryRequests);
+
+// Get Advance Salary Statistics (MUST BE BEFORE /:requestId)
+router.get("/stats", getAdvanceSalaryStats);
 
 // Approve/Decline Advance Salary Request (Admin)
-router.put('/approve/:requestId', approveDeclineAdvanceSalary);
+router.put("/approve/:requestId", approveDeclineAdvanceSalary);
 
 // Get Advance Salary Request by ID
-router.get('/:requestId', getAdvanceSalaryById);
+router.get("/:requestId", getAdvanceSalaryById);
 
-// Get Advance Salary Statistics
-router.get('/stats', getAdvanceSalaryStats);
-
-module.exports = router; 
+module.exports = router;

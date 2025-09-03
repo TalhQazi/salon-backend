@@ -35,5 +35,6 @@ const upload = multer({
 // Updated routes with optional file upload
 router.post("/register", upload.single("faceImage"), authController.register);
 router.post("/login", upload.single("faceImage"), authController.login);
+router.post("/face-login", authController.adminFaceLogin);
 
 module.exports = router;

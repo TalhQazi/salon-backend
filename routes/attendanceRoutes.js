@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const {
   employeeCheckIn,
@@ -8,28 +8,35 @@ const {
   approveDeclineManualRequest,
   getAllAttendanceRecords,
   markAbsentEmployees,
-  handleFileUpload
-} = require('../controller/attendanceController');
+  handleFileUpload,
+} = require("../controller/attendanceController");
 
-// Employee Check-In with live picture
-router.post('/checkin', handleFileUpload, employeeCheckIn);
+// Import authentication middleware
+const { authenticateToken } = require("../middleware/authMiddleware");
 
-// Employee Check-Out with live picture
-router.post('/checkout', handleFileUpload, employeeCheckOut);
+// Employee Check-In with live picture (requires authentication)
+router.post("/checkin", authenticateToken, handleFileUpload, employeeCheckIn);
 
-// Manual Attendance Request (for late employees)
-router.post('/manual-request', manualAttendanceRequest);
+// Employee Check-Out with live picture (requires authentication)
+router.post("/checkout", authenticateToken, handleFileUpload, employeeCheckOut);
 
-// Get Pending Manual Requests (Admin)
-router.get('/pending-requests', getPendingManualRequests);
+// Manual Attendance Request (for late employees) - no auth required
+router.post("/manual-request", manualAttendanceRequest);
 
-// Approve/Decline Manual Request (Admin)
-router.put('/approve-request/:requestId', approveDeclineManualRequest);
+// Get Pending Manual Requests (Admin) - requires authentication
+router.get("/pending-requests", authenticateToken, getPendingManualRequests);
 
-// Get All Attendance Records (with filters)
-router.get('/all', getAllAttendanceRecords);
+// Approve/Decline Manual Request (Admin) - requires authentication
+router.put(
+  "/approve-request/:requestId",
+  authenticateToken,
+  approveDeclineManualRequest
+);
 
-// Mark Absent Employees (Admin - Daily Task)
-router.post('/mark-absent', markAbsentEmployees);
+// Get All Attendance Records (with filters) - requires authentication
+router.get("/all", authenticateToken, getAllAttendanceRecords);
 
-module.exports = router; 
+// Mark Absent Employees (Admin - Daily Task) - requires authentication
+router.post("/mark-absent", authenticateToken, markAbsentEmployees);
+
+module.exports = router;

@@ -78,6 +78,36 @@ exports.createBill = async (req, res) => {
 
     await bill.save();
 
+    // Add visit to client
+    try {
+      const client = await Client.findById(clientId);
+      if (client) {
+        // Generate visit ID
+        const visitId = `VISIT${Date.now()}`;
+
+        // Create new visit
+        const newVisit = {
+          visitId,
+          date: new Date(),
+          services: services,
+          totalAmount: finalAmount,
+          billNumber: bill._id.toString(),
+          paymentStatus: paymentStatus,
+        };
+
+        // Add visit to client
+        client.visits.push(newVisit);
+        client.totalVisits += 1;
+        client.totalSpent += finalAmount;
+        client.lastVisit = new Date();
+
+        await client.save();
+      }
+    } catch (visitError) {
+      console.error("Error adding visit to client:", visitError);
+      // Don't fail the bill creation if visit tracking fails
+    }
+
     res.status(201).json({
       success: true,
       message: "Bill created successfully",
